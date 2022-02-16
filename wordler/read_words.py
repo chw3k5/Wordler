@@ -1,7 +1,7 @@
 from random import shuffle
 
 
-all_words_path='all_words.csv'
+all_words_path = 'all_words.csv'
 
 
 def words_into_list(path=all_words_path):
@@ -27,6 +27,13 @@ def build_by_letter_dict(word_list):
             by_letter[letter0][letter1][letter2][letter3] = {}
         by_letter[letter0][letter1][letter2][letter3][letter4] = single_word
     return by_letter
+
+
+def words_shuffled(path=all_words_path):
+    all_word_list = words_into_list(path=path)
+    shuffle(all_word_list)
+    return all_word_list
+
 
 def words_into_by_letter_dict(path=all_words_path):
     all_word_list = words_into_list(path=path)
