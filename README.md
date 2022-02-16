@@ -12,6 +12,9 @@ If that is not enough for you, then think of it as a simulation to help
 you test and hone your Wordle skills. Because all modern chess is informed by
 simulation, and Wordle is completely equivalent to chess, right?
 
+The code will also create a shareable output, to make sure all of your Twitter/group 
+chat/familial friends know how great you are.
+
 # Installation 
 Everything is the Python Standard Library, developed in 3.10.2, so there are
 no packages to install.
