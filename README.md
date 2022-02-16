@@ -4,13 +4,13 @@ conversation. If only there was some way to both feel superior and ruin it
 for everyone else...
 
 # Is this cheating?
-Using this system is only cheating as long as you acknowledge that having an
-extra circuit in your brain to easily parse and recognize the order of letters
-in words is also cheating.
+Using this system is cheating only if you acknowledge that having an
+extra circuit in your brain to easily parse words and recognize letter ordering
+is *also* cheating.
 
-If that is not enough for you, then think of it like a simulation to help
-you test and hone your Wordle skills. All modern chess is informed by
-simulation.
+If that is not enough for you, then think of it as a simulation to help
+you test and hone your Wordle skills. Because all modern chess is informed by
+simulation, and Wordle is completely equivalent to chess, right?
 
 # Installation 
 Everything is the Python Standard Library, developed in 3.10.2, so there are
@@ -19,9 +19,9 @@ no packages to install.
 ### Install Git
 https://git-scm.com/downloads
 
-make sure to install gitbash it you are on Windows
+Make sure to install gitbash it you are on Windows.
 
-### install Python
+### Install Python
 https://www.python.org/downloads/
 
 
@@ -33,8 +33,8 @@ git clone https://github.com/chw3k5/Wordler
 cd Wordler/wordler
 
 # Using helper() in narrow.py
-This is the program to give you some hints at what words are remaining 
-based on results that you get from Wordle the game.
+This program gives you hints about remaining, ranked words 
+based on results that you get from the Wordle game.
 
 It is simple to run and works out-of-the-box.
 
