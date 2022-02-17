@@ -21,6 +21,7 @@ if debug_mode:
     # this will do standard linear processing.
     multiprocessing_threads = None
     all_guesses = all_guesses[:100]
+    all_guesses[0] = 'raise'
 elif current_user == "chw3k5":
     multiprocessing_threads = balanced_threads  # Caleb's other computers
 elif current_user in "cwheeler":
@@ -90,9 +91,12 @@ def calc_outcomes(rerun=False, number_of_results_to_display=25):
     remaining_words_given_outcome = np.load("result.npy")
 
     average_remaining_list_length = np.sum(remaining_words_given_outcome * remaining_words_given_outcome / len(all_answers),
-                                           axis=0)
+                                           axis=1)
     a = np.argsort(average_remaining_list_length)
-    sorted_words = np.asarray(all_answers)[a]
+    if debug_mode:
+        sorted_words = np.asarray(all_guesses[0:100])[a]
+    else:
+        sorted_words = np.asarray(all_guesses)[a]
     sorted_values = average_remaining_list_length[a]
 
     print(f'Top {number_of_results_to_display} Results:')
