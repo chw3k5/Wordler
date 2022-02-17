@@ -1,10 +1,5 @@
 import numpy as np
-from narrow import AvailableWords
-from play import Wordle
-
-
-all_guesses = sorted(Wordle.allowed_guesses)
-all_words = sorted(Wordle.allowed_words)
+from narrow import AvailableWords, all_guesses, all_answers
 
 
 def generate_all_results():
@@ -54,7 +49,7 @@ def calc_outcomes(rerun=False, number_of_results_to_display=25):
     average_remaining_list_length = np.sum(remaining_words_given_outcome * remaining_words_given_outcome / len(all_words),
                                            axis=0)
     a = np.argsort(average_remaining_list_length)
-    sorted_words = np.asarray(all_words)[a]
+    sorted_words = np.asarray(all_answers)[a]
     sorted_values = average_remaining_list_length[a]
 
     print(f'Top {number_of_results_to_display} Results:')
