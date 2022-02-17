@@ -3,10 +3,7 @@ from copy import copy
 from random import shuffle
 from string import ascii_lowercase
 from read_words import words_into_list
-from narrow import allowed_true
-
-dir_name = os.path.dirname(os.path.realpath(__file__))
-allowed_guesses_path = os.path.join(dir_name, 'allowed_guesses.csv')
+from narrow import allowed_true, allowed_guesses
 
 
 def clear_console():
@@ -50,7 +47,7 @@ def is_unknown_test(letter):
 class Wordle:
     allowed_letters = set(ascii_lowercase)
     allowed_words = set(words_into_list())
-    allowed_guesses = set(words_into_list(path=allowed_guesses_path)) | allowed_words
+    allowed_guesses = allowed_guesses
     qwerty_order = [['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
                     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
                     ['z', 'x', 'c', 'v', 'b', 'n', 'm']]

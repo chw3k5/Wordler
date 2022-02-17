@@ -1,3 +1,4 @@
+import os
 from copy import deepcopy
 from operator import itemgetter
 from string import ascii_lowercase
@@ -6,6 +7,11 @@ from read_words import words_into_list, build_by_letter_dict
 
 
 all_word_list = words_into_list()
+all_answers = set(all_word_list)
+dir_name = os.path.dirname(os.path.realpath(__file__))
+allowed_guesses_path = os.path.join(dir_name, 'allowed_guesses.csv')
+allowed_guesses = set(words_into_list(path=allowed_guesses_path)) | all_answers
+all_guesses = sorted(allowed_guesses)
 
 
 allowed_letters = set(ascii_lowercase)
@@ -27,7 +33,7 @@ def process_bool_user_input(is_raw):
 def ask_letter_position(position, letter) -> bool:
     is_correct_place = None
     while is_correct_place is None:
-        is_correct_place_raw = input(f'Was the {position} letter "{letter}" in the correct position?')
+        is_correct_place_raw = input(f'Was the {position} letter "{letter}" in the correct position? [y/n]: ')
         is_correct_place = process_bool_user_input(is_raw=is_correct_place_raw)
     return is_correct_place
 
@@ -35,15 +41,19 @@ def ask_letter_position(position, letter) -> bool:
 def ask_letter_used(position, letter) -> bool:
     is_used = None
     while is_used is None:
-        is_used_raw = input(f'Was the {position} letter "{letter}" used in the word?')
+        is_used_raw = input(f'Was the {position} letter "{letter}" used in the word? [y/n]: ')
         is_used = process_bool_user_input(is_raw=is_used_raw)
     return is_used
 
 
-def ask_guess_word() -> str:
+def ask_guess_word(guess_num=None) -> str:
+    if guess_num is None:
+        question_string = 'Enter your guess word'
+    else:
+        question_string = f'Enter your guess for word number {guess_num}'
     guess_word = None
     while guess_word is None:
-        raw_word = input(f'Enter your guess word: ')
+        raw_word = input(f'{question_string}:\n\n')
         test_word = raw_word.strip().lower()
         if len(test_word) == 5:
             for letter in test_word:
@@ -69,14 +79,46 @@ def ask_guess_results(guess_word=''):
     finished = False
     test_results = None
     while not finished:
-        print('Enter Your Results')
-        print(' \033[1;37;40m 0 \033[0;0m for a letter that was not in the word.' )
+        print('\nEnter Your Results')
+        print(' \033[1;37;40m 0 \033[0;0m for a letter that was not in the word.')
         print(' \033[1;30;43m 1 \033[0;0m for a letter that is in the word, but is not the correct position.')
         print(' \033[1;30;42m 2 \033[0;0m for a letter is in the correct position.')
-        raw_results = input(f'   {guess_word}')
+        raw_results = input(f'  {guess_word}\n  ')
         test_results = raw_results.strip()
         finished = are_results_correctly_formatted(results_list=test_results)
     return test_results
+
+
+def get_suggestions(letters):
+    suggested_guesses = []
+    for guess in all_guesses:
+        for letter in letters:
+            if letter not in guess:
+                break
+        else:
+            suggested_guesses.append(guess)
+    return suggested_guesses
+
+
+def make_subsets(letters):
+    letters_subsets = []
+    for letter in reversed(letters):
+        letters_subsets.append(letters.replace(letter, ''))
+    return letters_subsets
+
+
+def guess_using_letters(letters):
+    # to exit recursion is all letters are removed
+    if len(letters) == 0:
+        return []
+    # get a word that uses all the letters
+    suggested_guesses = get_suggestions(letters=letters)
+    if suggested_guesses:
+        return suggested_guesses
+    # get words that use a subset of the letters, using recursion.
+    for letters_subset in make_subsets(letters=letters):
+        suggested_guesses.extend(guess_using_letters(letters=letters_subset))
+    return suggested_guesses
 
 
 class Rule(NamedTuple):
@@ -101,6 +143,7 @@ class AvailableWords:
     def __init__(self, verbose: bool = True):
         self.verbose = verbose
         # data structures that get initialized with self.reset()
+        self.guess_number = None
         self.remaining_words = None
         self.possible_words_dict = None
         self.letter_counter = None
@@ -110,7 +153,9 @@ class AvailableWords:
         self.known_wrong_positions = None
         self.wrong_guesses = None
         self.remaining_letters = None
-        self.ranked_words = None
+        self.count_list = None
+        self.guess_using_remaining = None
+        self.ranked_words_by_rank = None
         # the method the set/restores the initial state
         self.reset()
 
@@ -146,14 +191,21 @@ class AvailableWords:
                 return_str += f'is {self.index_terms[value]} letter  '
         # Remaining Letters
         return_str += f'\n\nRemaining Letters ({len(self.remaining_letters)}):\n '
-        count_list = [(letter, self.letter_counter[letter])
-                      for letter in self.remaining_letters]
-        for letter, count in sorted(count_list, key=itemgetter(1), reverse=True):
+        for letter, count in self.count_list:
             return_str += f'{letter}:{self.letter_counter[letter]}  '
         # Ranked Words
-        return_str += f'\n\nSuggestions from Possible Words - Ranked by Sum of Remaining Letters:\n '
-        for word, rank in self.ranked_words:
+        return_str += f'\n\nSuggestions Correct words Possible Words - Ranked by Sum of Remaining Letters:\n '
+        for word, rank in self.ranked_words_by_rank:
             return_str += f'{word}({rank}) '
+        # allowed guess to use up remaining letters
+        return_str += f'\n\nSuggestions of Guesses to use some of the top 5 remaining letters \n' +\
+                      f' * indicates this is a possible answer:\n    '
+        for guess_word in self.guess_using_remaining:
+            if guess_word in self.remaining_words:
+                warning_str = '*'
+            else:
+                warning_str = ''
+            return_str += f'{guess_word}{warning_str}  '
         # finishing up
         return_str += '\n\n'
         return return_str
@@ -162,6 +214,7 @@ class AvailableWords:
         return len(self.remaining_words)
 
     def reset(self):
+        self.guess_number = 0
         self.known_rules = set()
         self.known_letters = {}
         self.know_position = {}
@@ -170,6 +223,7 @@ class AvailableWords:
         self.set_data(word_list=deepcopy(self.all_word_list))
 
     def count_letters(self):
+        # count the letters that remain.
         self.letter_counter = {}
         for word in list(self):
             for letter in word:
@@ -177,6 +231,16 @@ class AvailableWords:
                     self.letter_counter[letter] = 0
                 self.letter_counter[letter] += 1
         self.remaining_letters = set(self.letter_counter.keys()) - set(self.known_letters.keys())
+        self.count_list = sorted([(letter, self.letter_counter[letter]) for letter in self.remaining_letters],
+                                 key=itemgetter(1), reverse=True)
+        # get best guesses using the remaining letters
+        top_5_remaining_letters = ''
+        for letter, count in self.count_list:
+            if len(top_5_remaining_letters) < 5:
+                top_5_remaining_letters += letter
+            else:
+                break
+        self.guess_using_remaining = guess_using_letters(letters=top_5_remaining_letters)
 
     def get_rank_value(self, word):
         letter_set = {letter for letter in word}
@@ -187,8 +251,8 @@ class AvailableWords:
         return value
 
     def rank_words(self):
-        self.ranked_words = sorted([(word, self.get_rank_value(word)) for word in list(self)],
-                                   key=itemgetter(1), reverse=True)
+        self.ranked_words_by_rank = sorted([(word, self.get_rank_value(word)) for word in list(self)],
+                                           key=itemgetter(1), reverse=True)
 
     def set_data(self, word_list):
         self.remaining_words = word_list
@@ -263,8 +327,9 @@ class AvailableWords:
         return letter in self.known_wrong_positions.keys() and letter_index in self.known_wrong_positions[letter]
 
     def ask_guess_slow(self):
+        self.guess_number += 1
         rules_list = []
-        guess_word = ask_guess_word()
+        guess_word = ask_guess_word(guess_num=self.guess_number)
         for letter_index, letter in list(enumerate(guess_word)):
             position = self.index_terms[letter_index]
             if not self.is_known_wrong_letter(letter=letter, letter_index=letter_index) \
@@ -287,9 +352,10 @@ class AvailableWords:
         self.add_guess(rules_list=rules_list)
 
     def ask_guess(self, guess_word=None, results=None):
+        self.guess_number += 1
         rules_list = []
         if guess_word is None:
-            guess_word = ask_guess_word()
+            guess_word = ask_guess_word(guess_num=self.guess_number)
         if results is None:
             results = ask_guess_results(guess_word=guess_word)
         for letter_index, letter in list(enumerate(guess_word)):
@@ -317,12 +383,9 @@ class AvailableWords:
 
 def helper():
     av = AvailableWords()
-    guess_num = 0
     print(av)
     while len(av) > 1:
-        guess_num += 1
         av.ask_guess()
-        print(f'\n After Guess number {guess_num}\n')
 
 
 if __name__ == '__main__':
