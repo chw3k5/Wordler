@@ -1,6 +1,6 @@
 from copy import deepcopy
-from string import ascii_lowercase
 from operator import itemgetter
+from string import ascii_lowercase
 from typing import NamedTuple, Optional
 from read_words import words_into_list, build_by_letter_dict
 

@@ -1,7 +1,9 @@
+import os
 from random import shuffle
 
 
-all_words_path = 'all_words.csv'
+dir_name = os.path.dirname(os.path.realpath(__file__))
+all_words_path = os.path.join(dir_name, 'all_words.csv')
 
 
 def words_into_list(path=all_words_path):
