@@ -60,3 +60,17 @@ python play.py
 or 
 
 python3 play.py
+
+### More options for play.py
+To see the (on-going) options for play.py use:
+
+python play.py --help
+
+When new options are added, this help command is updated.
+
+# Updating
+No promises, but you can always check for updates with
+
+git pull
+
+when in the Wordler directory.
