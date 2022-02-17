@@ -4,6 +4,7 @@ from play import Wordle
 
 
 all_guesses = sorted(Wordle.allowed_guesses)
+all_words = sorted(Wordle.allowed_words)
 
 
 def generate_all_results():
@@ -50,10 +51,10 @@ def calc_outcomes(rerun=False, number_of_results_to_display=25):
 
     remaining_words_given_outcome = np.load("result.npy")
 
-    average_remaining_list_length = np.sum(remaining_words_given_outcome * remaining_words_given_outcome / len(all_guesses),
+    average_remaining_list_length = np.sum(remaining_words_given_outcome * remaining_words_given_outcome / len(all_words),
                                            axis=0)
     a = np.argsort(average_remaining_list_length)
-    sorted_words = np.asarray(all_guesses)[a]
+    sorted_words = np.asarray(all_words)[a]
     sorted_values = average_remaining_list_length[a]
 
     print(f'Top {number_of_results_to_display} Results:')
@@ -61,7 +62,7 @@ def calc_outcomes(rerun=False, number_of_results_to_display=25):
     for word_index, (sorted_word, sorted_value) in list(enumerate(zip(sorted_words, sorted_values))):
         if word_index == number_of_results_to_display:
             break
-        print(f'{sorted_words} | ({sorted_value})')
+        print(f'{sorted_word} | ({sorted_value})')
 
 
 if __name__ == '__main__':
