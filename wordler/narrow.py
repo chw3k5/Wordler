@@ -282,10 +282,12 @@ class AvailableWords:
         print('\n')
         self.add_guess(rules_list=rules_list)
 
-    def ask_guess(self):
+    def ask_guess(self,guess_word = None,results = None):
         rules_list = []
-        guess_word = ask_guess_word()
-        results = ask_guess_results(guess_word=guess_word)
+        if guess_word == None:
+            guess_word = ask_guess_word()
+        if results == None:
+            results = ask_guess_results(guess_word=guess_word)
         for letter_index, letter in list(enumerate(guess_word)):
             result = results[letter_index]
             if not self.is_known_wrong_letter(letter=letter, letter_index=letter_index) \
