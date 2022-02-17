@@ -1,5 +1,30 @@
+import os
+from getpass import getuser
+from multiprocessing import Pool
 import numpy as np
-from narrow import AvailableWords, all_guesses, all_answers
+from narrow import all_guesses, all_answers, calc_remaining_words
+
+# Debug mode
+debug_mode = False
+# multiprocessing
+# the 'assumption' of max threads is that we are cpu limited in processing,
+# so we use should not use more than a computer's available threads
+max_threads = int(os.cpu_count())
+# Try to strike a balance between best performance and computer usability during processing
+balanced_threads = max(max_threads - 2, 2)
+# Use onl half of the available threads for processing
+half_threads = int(np.round(os.cpu_count() * 0.5))
+
+current_user = getuser()
+if debug_mode:
+    # this will do standard linear processing.
+    multiprocessing_threads = None
+elif current_user == "chw3k5":
+    multiprocessing_threads = balanced_threads  # Caleb's other computers
+elif current_user in "cwheeler":
+    multiprocessing_threads = max_threads  # Mac Pro 8-core intel core i9 processor 16 threads
+else:
+    multiprocessing_threads = balanced_threads
 
 
 def generate_all_results():
@@ -11,26 +36,42 @@ def generate_all_results():
                         yield str(i) + str(j) + str(k) + str(n) + str(m)
 
 
-all_outcomes_list = list(iter(generate_all_results()))
+all_outcomes_list = list(generate_all_results())
 
 
-def generate_per_word_outcomes(guess_word):
+def per_word_outcomes(guess_word):
     for single_outcome in all_outcomes_list:
-        av = AvailableWords(verbose=False)
-        av.ask_guess(guess_word=guess_word, results=single_outcome)
-        yield len(av.remaining_words)
+        known_wrong_positions, available_answers = \
+            calc_remaining_words(known_wrong_positions={}, available_answers=all_answers,
+                                 guess_word=guess_word, guess_results=single_outcome)
+        yield len(available_answers)
+
+
+def per_word_outcomes_wrapper(args):
+    guess_index, guess_word = args
+    print(f'{"%5d" % guess_index}, {guess_word}')
+    this_word_outcomes = list(per_word_outcomes(guess_word=guess_word))
+    print(f'      Max outcomes value for {guess_word} {max(this_word_outcomes)}')
+    return this_word_outcomes
 
 
 def generate_all_words_outcomes():
-    for guess_index, guess_word in list(enumerate(sorted(all_guesses))):
-        print(f'{"%5d" % guess_index}, {guess_word}')
-        this_word_outcomes = list(iter(generate_per_word_outcomes(guess_word=guess_word)))
-        print(f'      Max outcomes value for {guess_word} {max(this_word_outcomes)}')
-        yield this_word_outcomes
+    if multiprocessing_threads is None:
+        all_outcomes_list = []
+        for guess_index, guess_word in list(enumerate(all_guesses)):
+            this_word_outcomes = per_word_outcomes_wrapper(args=(guess_index, guess_word))
+            all_outcomes_list.append(this_word_outcomes)
+
+    else:
+        all_args = [(guess_index, guess_word) for guess_index, guess_word in list(enumerate(all_guesses))]
+        with Pool(multiprocessing_threads) as p:
+            all_outcomes_list = p.map(per_word_outcomes_wrapper, all_args)
+    return all_outcomes_list
 
 
 def calc():
-    remaining_words_given_outcome = np.array(list(iter(generate_all_words_outcomes())))
+    all_outcomes_list = generate_all_words_outcomes()
+    remaining_words_given_outcome = np.array(all_outcomes_list)
     np.save("result.npy", remaining_words_given_outcome)
 
 

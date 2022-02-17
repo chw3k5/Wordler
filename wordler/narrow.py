@@ -121,6 +121,54 @@ def guess_using_letters(letters):
     return suggested_guesses
 
 
+def narrow_by_correct_place(available_answers, letter, letter_index):
+    return [test_word for test_word in available_answers if letter == test_word[letter_index]]
+
+
+def narrow_by_usage(available_answers, known_wrong_positions, letter):
+    for test_word in available_answers:
+        # the letter must be in the word
+        if letter in test_word:
+            for test_index, test_letter in list(enumerate(test_word)):
+                if test_letter == letter and letter in known_wrong_positions.keys() \
+                        and test_index in known_wrong_positions[letter]:
+                    break
+            else:
+                yield test_word
+
+
+def narrow_by_usage_wrapper(available_answers, known_wrong_positions, letter, letter_index):
+    # track the data about this letter's usage
+    if letter not in known_wrong_positions.keys():
+        known_wrong_positions[letter] = set()
+    known_wrong_positions[letter].add(letter_index)
+    remaining = list(narrow_by_usage(available_answers=available_answers, known_wrong_positions=known_wrong_positions,
+                                     letter=letter))
+    return known_wrong_positions, remaining
+
+
+def narrow_by_omission(available_answers, letter):
+    return [test_word for test_word in available_answers if letter not in test_word]
+
+
+def calc_remaining_words(known_wrong_positions, available_answers, guess_word, guess_results):
+    for letter_index, (letter, guess_result) in list(enumerate(zip(guess_word, guess_results))):
+        guess_result = str(guess_result)
+        if guess_result == '2':
+            available_answers = narrow_by_correct_place(available_answers=available_answers,
+                                                        letter=letter, letter_index=letter_index)
+        elif guess_result == '1':
+            known_wrong_positions, remaining = narrow_by_usage_wrapper(available_answers=available_answers,
+                                                                       known_wrong_positions=known_wrong_positions,
+                                                                       letter=letter, letter_index=letter_index)
+        elif guess_result == '0':
+            available_answers = narrow_by_omission(available_answers=available_answers, letter=letter)
+        else:
+            raise KeyError(f'Guess result: {guess_result} is not an allowed value.')
+
+    return known_wrong_positions, available_answers
+
+
 class Rule(NamedTuple):
     letter: str
     letter_index: int
@@ -261,10 +309,8 @@ class AvailableWords:
         self.rank_words()
 
     def narrow_by_correct_place(self, letter, letter_index):
-        narrowed_word_list = []
-        for test_word in list(self):
-            if letter == test_word[letter_index]:
-                narrowed_word_list.append(test_word)
+        narrowed_word_list = narrow_by_correct_place(available_answers=list(self),
+                                                     letter=letter, letter_index=letter_index)
         self.set_data(word_list=narrowed_word_list)
         self.known_letters[letter] = letter_index
         self.know_position[letter_index] = letter
@@ -276,24 +322,13 @@ class AvailableWords:
             self.known_wrong_positions[letter] = set()
         self.known_wrong_positions[letter].add(letter_index)
         # narrow the list of possible words
-        narrowed_word_list = []
-        for test_word in list(self):
-            # the letter must be in the word
-            if letter in test_word:
-                # but the letter must not be in the wrong position
-                for test_index, test_letter in list(enumerate(test_word)):
-                    if test_letter == letter and self.is_known_wrong_position(letter=letter, letter_index=test_index):
-                        break
-                else:
-                    # happens only when there is no break statement
-                    narrowed_word_list.append(test_word)
+        self.known_wrong_positions, narrowed_word_list = \
+            narrow_by_usage_wrapper(available_answers=list(self), known_wrong_positions=self.known_wrong_positions,
+                                    letter=letter, letter_index=letter_index)
         self.set_data(word_list=narrowed_word_list)
 
     def narrow_by_omission(self, letter):
-        narrowed_word_list = []
-        for test_word in list(self):
-            if letter not in test_word:
-                narrowed_word_list.append(test_word)
+        narrowed_word_list = narrow_by_omission(available_answers=list(self), letter=letter)
         self.set_data(word_list=narrowed_word_list)
         self.known_letters[letter] = False
 
