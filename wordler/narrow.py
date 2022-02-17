@@ -158,9 +158,10 @@ def calc_remaining_words(known_wrong_positions, available_answers, guess_word, g
             available_answers = narrow_by_correct_place(available_answers=available_answers,
                                                         letter=letter, letter_index=letter_index)
         elif guess_result == '1':
-            known_wrong_positions, remaining = narrow_by_usage_wrapper(available_answers=available_answers,
-                                                                       known_wrong_positions=known_wrong_positions,
-                                                                       letter=letter, letter_index=letter_index)
+            known_wrong_positions, available_answers = \
+                narrow_by_usage_wrapper(available_answers=available_answers,
+                                        known_wrong_positions=known_wrong_positions,
+                                        letter=letter, letter_index=letter_index)
         elif guess_result == '0':
             available_answers = narrow_by_omission(available_answers=available_answers, letter=letter)
         else:
