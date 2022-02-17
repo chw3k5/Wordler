@@ -98,7 +98,8 @@ class AvailableWords:
     all_word_list = all_word_list
     index_terms = ['first', 'second', 'third', 'forth', 'fifth']
 
-    def __init__(self):
+    def __init__(self, verbose: bool = True):
+        self.verbose = verbose
         # data structures that get initialized with self.reset()
         self.remaining_words = None
         self.possible_words_dict = None
@@ -245,8 +246,9 @@ class AvailableWords:
     def add_guess(self, rules_list):
         for rule in list(rules_list):
             self.add_rule(rule=rule)
-        print(f'{len(self.remaining_words)} words are possible')
-        print(f'  {self}')
+        if self.verbose:
+            print(f'{len(self.remaining_words)} words are possible')
+            print(f'  {self}')
 
     def is_known_wrong_letter(self, letter, letter_index) -> bool:
         return (letter, letter_index) in self.wrong_guesses
@@ -267,7 +269,8 @@ class AvailableWords:
             position = self.index_terms[letter_index]
             if not self.is_known_wrong_letter(letter=letter, letter_index=letter_index) \
                     and not self.is_known_letter_position(letter=letter, letter_index=letter_index):
-                print("")
+                if self.verbose:
+                    print("")
                 if self.is_known_this_position(letter=letter, letter_index=letter_index):
                     is_correct_place = False
                 else:
@@ -279,14 +282,15 @@ class AvailableWords:
                 rule = Rule(letter=letter, letter_index=letter_index, is_correct_place=is_correct_place,
                             is_used=is_used)
                 rules_list.append(rule)
-        print('\n')
+        if self.verbose:
+            print('\n')
         self.add_guess(rules_list=rules_list)
 
-    def ask_guess(self,guess_word = None,results = None):
+    def ask_guess(self, guess_word=None, results=None):
         rules_list = []
-        if guess_word == None:
+        if guess_word is None:
             guess_word = ask_guess_word()
-        if results == None:
+        if results is None:
             results = ask_guess_results(guess_word=guess_word)
         for letter_index, letter in list(enumerate(guess_word)):
             result = results[letter_index]
@@ -306,7 +310,8 @@ class AvailableWords:
                 rule = Rule(letter=letter, letter_index=letter_index, is_correct_place=is_correct_place,
                             is_used=is_used)
                 rules_list.append(rule)
-        print('\n')
+        if self.verbose:
+            print('\n')
         self.add_guess(rules_list=rules_list)
 
 
