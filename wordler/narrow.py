@@ -27,32 +27,6 @@ def clear_console():
     os.system(command)
 
 
-def process_bool_user_input(is_raw):
-    is_test = is_raw.strip().lower()
-    if is_test in allowed_true:
-        return True
-    elif is_test in allowed_false:
-        return False
-    else:
-        return None
-
-
-def ask_letter_position(position, letter) -> bool:
-    is_correct_place = None
-    while is_correct_place is None:
-        is_correct_place_raw = input(f'Was the {position} letter "{letter}" in the correct position? [y/n]: ')
-        is_correct_place = process_bool_user_input(is_raw=is_correct_place_raw)
-    return is_correct_place
-
-
-def ask_letter_used(position, letter) -> bool:
-    is_used = None
-    while is_used is None:
-        is_used_raw = input(f'Was the {position} letter "{letter}" used in the word? [y/n]: ')
-        is_used = process_bool_user_input(is_raw=is_used_raw)
-    return is_used
-
-
 def ask_guess_word(guess_number=None) -> str:
     if guess_number is None:
         question_string = 'Enter your guess word'
@@ -137,10 +111,11 @@ def narrow_by_correct_place(available_answers, letter, letter_index):
     return [test_word for test_word in available_answers if letter == test_word[letter_index]]
 
 
-def narrow_by_usage(available_answers, known_wrong_positions, letter):
+def narrow_by_usage(available_answers, known_wrong_positions, letter, min_letter_occurrences):
     for test_word in available_answers:
-        # the letter must be in the word
-        if letter in test_word:
+        # the letter must be in the word the correct number of times
+        if test_word.count(letter) >= min_letter_occurrences:
+            # This letters must not be in known incorrect positions.
             for test_index, test_letter in list(enumerate(test_word)):
                 if test_letter == letter and letter in known_wrong_positions.keys() \
                         and test_index in known_wrong_positions[letter]:
@@ -149,13 +124,13 @@ def narrow_by_usage(available_answers, known_wrong_positions, letter):
                 yield test_word
 
 
-def narrow_by_usage_wrapper(available_answers, known_wrong_positions, letter, letter_index):
+def narrow_by_usage_wrapper(available_answers, known_wrong_positions, letter, letter_index, min_letter_occurrences):
     # track the data about this letter's usage
     if letter not in known_wrong_positions.keys():
         known_wrong_positions[letter] = set()
     known_wrong_positions[letter].add(letter_index)
     remaining = list(narrow_by_usage(available_answers=available_answers, known_wrong_positions=known_wrong_positions,
-                                     letter=letter))
+                                     letter=letter, min_letter_occurrences=min_letter_occurrences))
     return known_wrong_positions, remaining
 
 
@@ -163,23 +138,63 @@ def narrow_by_omission(available_answers, letter):
     return [test_word for test_word in available_answers if letter not in test_word]
 
 
-def calc_remaining_words(known_wrong_positions, available_answers, guess_word, guess_results):
-    for letter_index, (letter, guess_result) in list(enumerate(zip(guess_word, guess_results))):
-        guess_result = str(guess_result)
-        if guess_result == '2':
-            available_answers = narrow_by_correct_place(available_answers=available_answers,
-                                                        letter=letter, letter_index=letter_index)
-        elif guess_result == '1':
+def narrow_by_max_usage(available_answers, letter, max_letter_occurrences):
+    return [test_word for test_word in available_answers if test_word.count(letter) <= max_letter_occurrences]
+
+
+def calc_remaining_words(known_wrong_positions, known_positions, available_answers, guess_word, guess_results):
+    unassigned_indexes = list(range(len(guess_word)))
+    required_letter_count_this_guess = {}
+    known_positions_this_guess = {}
+    known_not_used = set()
+    # layer 1 the letter is in the correct place
+    for unassigned_index in list(unassigned_indexes):
+        if guess_results[unassigned_index] == '2':
+            if unassigned_index not in known_positions.keys():
+                correct_guess_letter = guess_word[unassigned_index]
+                if correct_guess_letter not in required_letter_count_this_guess.keys():
+                    required_letter_count_this_guess[correct_guess_letter] = 0
+                required_letter_count_this_guess[correct_guess_letter] += 1
+                available_answers = narrow_by_correct_place(available_answers=available_answers,
+                                                            letter=correct_guess_letter, letter_index=unassigned_index)
+                known_positions_this_guess[unassigned_index] = correct_guess_letter
+            unassigned_indexes.remove(unassigned_index)
+
+    # layer 2, for the remaining letters check if they are in the reaming part of the word
+    for unassigned_index in list(unassigned_indexes):
+        if guess_results[unassigned_index] == '1':
+            is_used_guess_letter = guess_word[unassigned_index]
+            if is_used_guess_letter not in required_letter_count_this_guess.keys():
+                required_letter_count_this_guess[is_used_guess_letter] = 0
+            required_letter_count_this_guess[is_used_guess_letter] += 1
             known_wrong_positions, available_answers = \
                 narrow_by_usage_wrapper(available_answers=available_answers,
                                         known_wrong_positions=known_wrong_positions,
-                                        letter=letter, letter_index=letter_index)
-        elif guess_result == '0':
-            available_answers = narrow_by_omission(available_answers=available_answers, letter=letter)
-        else:
-            raise KeyError(f'Guess result: {guess_result} is not an allowed value.')
+                                        letter=is_used_guess_letter, letter_index=unassigned_index,
+                                        min_letter_occurrences=required_letter_count_this_guess[is_used_guess_letter])
+            unassigned_indexes.remove(unassigned_index)
 
-    return known_wrong_positions, available_answers
+    # these letters are not used or are not used in this number
+    for unassigned_index in list(unassigned_indexes):
+        if guess_results[unassigned_index] == '0':
+            not_needed_guess_letter = guess_word[unassigned_index]
+            if not_needed_guess_letter in required_letter_count_this_guess.keys():
+                # this letter is used, but not the number of times it occurs in the guess word
+                narrow_by_max_usage(available_answers=available_answers, letter=not_needed_guess_letter,
+                                    max_letter_occurrences=required_letter_count_this_guess[not_needed_guess_letter])
+                if not_needed_guess_letter not in known_wrong_positions.keys():
+                    known_wrong_positions[not_needed_guess_letter] = set()
+                known_wrong_positions[not_needed_guess_letter].add(unassigned_index)
+            else:
+                # this letter is not in the word at all
+                available_answers = narrow_by_omission(available_answers=available_answers,
+                                                       letter=not_needed_guess_letter)
+                known_not_used.add(not_needed_guess_letter)
+
+        else:
+            raise KeyError(f'Guess result: {guess_results[unassigned_index]} is not an allowed value.')
+    return known_wrong_positions, known_positions_this_guess, required_letter_count_this_guess, available_answers,\
+        known_not_used
 
 
 class Rule(NamedTuple):
@@ -209,9 +224,10 @@ class AvailableWords:
         self.possible_words_dict = None
         self.letter_counter = None
         self.known_rules = None
-        self.known_letters = None
-        self.know_position = None
+        self.required_letter_count = None
+        self.known_positions = None
         self.known_wrong_positions = None
+        self.known_not_used = None
         self.wrong_guesses = None
         self.remaining_letters = None
         self.count_list = None
@@ -239,9 +255,9 @@ class AvailableWords:
             return_str += f'{remaining_word} '
             first_letter_last_word = first_letter_this_word
         # Known Letters Recap
-        return_str += f'\n\nKnown Letters ({len(self.known_letters)}):\n '
-        for letter in sorted(self.known_letters.keys()):
-            value = self.known_letters[letter]
+        return_str += f'\n\nKnown Letters ({len(self.required_letter_count)}):\n '
+        for letter in sorted(self.required_letter_count.keys()):
+            value = self.required_letter_count[letter]
             return_str += f'{letter}:'
             if isinstance(value, bool):
                 if value:
@@ -262,12 +278,14 @@ class AvailableWords:
         if len(self.ranked_words_by_rank) > 1:
             return_str += f'\n\nSuggestions of Guesses to use some of the top 5 remaining letters \n' +\
                           f' * indicates this is a possible answer:\n    '
-            for guess_word in self.guess_using_remaining:
+            for counter, guess_word in list(enumerate(self.guess_using_remaining)):
                 if guess_word in self.remaining_words:
                     warning_str = '*'
                 else:
                     warning_str = ''
                 return_str += f'{guess_word}{warning_str}  '
+                if counter > 38:
+                    break
         # finishing up
         return_str += '\n\n'
         return return_str
@@ -278,9 +296,10 @@ class AvailableWords:
     def reset(self):
         self.guess_number = 0
         self.known_rules = set()
-        self.known_letters = {}
-        self.know_position = {}
+        self.required_letter_count = {}
+        self.known_positions = {}
         self.known_wrong_positions = {}
+        self.known_not_used = set()
         self.wrong_guesses = set()
         self.set_data(word_list=deepcopy(self.all_word_list))
 
@@ -293,7 +312,7 @@ class AvailableWords:
                 if letter not in self.letter_counter.keys():
                     self.letter_counter[letter] = 0
                 self.letter_counter[letter] += 1
-        self.remaining_letters = set(self.letter_counter.keys()) - set(self.known_letters.keys())
+        self.remaining_letters = set(self.letter_counter.keys()) - set(self.required_letter_count.keys())
         self.count_list = sorted([(letter, self.letter_counter[letter]) for letter in self.remaining_letters],
                                  key=itemgetter(1), reverse=True)
         # get best guesses using the remaining letters
@@ -323,44 +342,19 @@ class AvailableWords:
         self.count_letters()
         self.rank_words()
 
-    def narrow_by_correct_place(self, letter, letter_index):
-        narrowed_word_list = narrow_by_correct_place(available_answers=list(self),
-                                                     letter=letter, letter_index=letter_index)
-        self.known_letters[letter] = letter_index
-        self.know_position[letter_index] = letter
-        self.set_data(word_list=narrowed_word_list)
-
-    def narrow_by_usage(self, letter, letter_index):
-        # track the data about this letter's usage
-        self.known_letters[letter] = True
-        if letter not in self.known_wrong_positions.keys():
-            self.known_wrong_positions[letter] = set()
-        self.known_wrong_positions[letter].add(letter_index)
-        # narrow the list of possible words
-        self.known_wrong_positions, narrowed_word_list = \
-            narrow_by_usage_wrapper(available_answers=list(self), known_wrong_positions=self.known_wrong_positions,
-                                    letter=letter, letter_index=letter_index)
-        self.set_data(word_list=narrowed_word_list)
-
-    def narrow_by_omission(self, letter):
-        narrowed_word_list = narrow_by_omission(available_answers=list(self), letter=letter)
-        self.known_letters[letter] = False
-        self.set_data(word_list=narrowed_word_list)
-
-    def add_rule(self, rule: Rule):
-        if rule.is_correct_place:
-            self.narrow_by_correct_place(letter=rule.letter, letter_index=rule.letter_index)
-        elif rule.is_used:
-            self.narrow_by_usage(letter=rule.letter, letter_index=rule.letter_index)
-        else:
-            self.narrow_by_omission(letter=rule.letter)
-            self.wrong_guesses.add((rule.letter, rule.letter_index))
-        self.known_rules.add(rule)
-
-    def add_guess(self, rules_list):
-        # only one rule is create per letter guess, that rule is made on the first letter recieved
-        for rule in list(rules_list):
-            self.add_rule(rule=rule)
+    def add_guess(self, guess_word, guess_results):
+        self.known_wrong_positions, known_positions_this_guess, required_letter_count_this_guess, available_answers,\
+            known_not_used = \
+            calc_remaining_words(known_wrong_positions=self.known_wrong_positions,
+                                 available_answers=list(self), guess_word=guess_word,
+                                 guess_results=guess_results, known_positions=self.known_positions)
+        self.known_positions.update(known_positions_this_guess)
+        for letter in required_letter_count_this_guess.keys():
+            if letter not in self.required_letter_count.keys() or \
+                    required_letter_count_this_guess[letter] > self.required_letter_count[letter]:
+                self.required_letter_count[letter] = required_letter_count_this_guess[letter]
+        self.set_data(word_list=available_answers)
+        # display the results
         if self.verbose:
             clear_console()
             print(f'{len(self.remaining_words)} words are possible')
@@ -370,67 +364,23 @@ class AvailableWords:
         return (letter, letter_index) in self.wrong_guesses
 
     def is_known_letter_position(self, letter, letter_index) -> bool:
-        return letter_index in self.know_position.keys() and letter == self.know_position[letter_index]
+        return letter_index in self.known_positions.keys() and letter == self.known_positions[letter_index]
 
     def is_known_this_position(self, letter, letter_index) -> bool:
-        return letter_index in self.know_position.keys() and letter != self.know_position[letter_index]
+        return letter_index in self.known_positions.keys() and letter != self.known_positions[letter_index]
     
     def is_known_wrong_position(self, letter, letter_index) -> bool:
         return letter in self.known_wrong_positions.keys() and letter_index in self.known_wrong_positions[letter]
 
-    def ask_guess_slow(self):
-        self.guess_number += 1
-        rules_list = []
-        guess_word = ask_guess_word(guess_num=self.guess_number)
-        for letter_index, letter in list(enumerate(guess_word)):
-            position = self.index_terms[letter_index]
-            if not self.is_known_wrong_letter(letter=letter, letter_index=letter_index) \
-                    and not self.is_known_letter_position(letter=letter, letter_index=letter_index):
-                if self.verbose:
-                    print("")
-                if self.is_known_this_position(letter=letter, letter_index=letter_index):
-                    is_correct_place = False
-                else:
-                    is_correct_place = ask_letter_position(position=position, letter=letter)
-                if is_correct_place:
-                    is_used = True
-                else:
-                    is_used = ask_letter_position(position=position, letter=letter)
-                rule = Rule(letter=letter, letter_index=letter_index, is_correct_place=is_correct_place,
-                            is_used=is_used)
-                rules_list.append(rule)
-        if self.verbose:
-            print('\n')
-        self.add_guess(rules_list=rules_list)
-
     def ask_guess(self, guess_word=None, results=None):
         self.guess_number += 1
-        rules_list = []
         if guess_word is None:
             guess_word = ask_guess_word(guess_number=self.guess_number)
         if results is None:
             results = ask_guess_results(guess_word=guess_word, guess_number=self.guess_number)
-        for letter_index, letter in list(enumerate(guess_word)):
-            result = results[letter_index]
-            if not self.is_known_wrong_letter(letter=letter, letter_index=letter_index) \
-                    and not self.is_known_letter_position(letter=letter, letter_index=letter_index):
-                if result == '2':
-                    is_correct_place = True
-                    is_used = True
-                elif result == '1':
-                    is_correct_place = False
-                    is_used = True
-                elif result == '0':
-                    is_correct_place = False
-                    is_used = False
-                else:
-                    raise ValueError(f"{result} is not one of the expect values: {allow_result_answers}.")
-                rule = Rule(letter=letter, letter_index=letter_index, is_correct_place=is_correct_place,
-                            is_used=is_used)
-                rules_list.append(rule)
         if self.verbose:
             print('\n')
-        self.add_guess(rules_list=rules_list)
+        self.add_guess(guess_word=guess_word, guess_results=results)
 
 
 def helper():

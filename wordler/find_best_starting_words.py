@@ -44,8 +44,9 @@ all_outcomes_list = list(generate_all_results())
 
 def per_word_outcomes(guess_word):
     for single_outcome in all_outcomes_list:
-        known_wrong_positions, available_answers = \
-            calc_remaining_words(known_wrong_positions={}, available_answers=all_answers,
+        known_wrong_positions, known_positions_this_guess, required_letter_count_this_guess, available_answers, \
+            known_not_used = \
+            calc_remaining_words(known_wrong_positions={}, known_positions={}, available_answers=all_answers,
                                  guess_word=guess_word, guess_results=single_outcome)
         yield len(available_answers)
 
