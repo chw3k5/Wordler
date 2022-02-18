@@ -1,16 +1,8 @@
-import os
 from copy import copy
 from random import shuffle
 from string import ascii_lowercase
 from read_words import words_into_list
-from narrow import allowed_true, allowed_guesses
-
-
-def clear_console():
-    command = 'clear'
-    if os.name in ('nt', 'dos'):  # If Machine is running on Windows, use cls
-        command = 'cls'
-    os.system(command)
+from narrow import allowed_true, allowed_guesses, clear_console
 
 
 def get_punctuation(number_of_guesses):

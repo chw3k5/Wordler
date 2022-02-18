@@ -20,6 +20,13 @@ allowed_false = {"false", 'n', 'no', 'nope', 'f', '0'}
 allow_result_answers = {'0', '1', '2'}
 
 
+def clear_console():
+    command = 'clear'
+    if os.name in ('nt', 'dos'):  # If Machine is running on Windows, use cls
+        command = 'cls'
+    os.system(command)
+
+
 def process_bool_user_input(is_raw):
     is_test = is_raw.strip().lower()
     if is_test in allowed_true:
@@ -46,11 +53,11 @@ def ask_letter_used(position, letter) -> bool:
     return is_used
 
 
-def ask_guess_word(guess_num=None) -> str:
-    if guess_num is None:
+def ask_guess_word(guess_number=None) -> str:
+    if guess_number is None:
         question_string = 'Enter your guess word'
     else:
-        question_string = f'Enter your guess for word number {guess_num}'
+        question_string = f'Enter your guess for word number {guess_number}'
     guess_word = None
     while guess_word is None:
         raw_word = input(f'{question_string}:\n\n')
@@ -75,11 +82,16 @@ def are_results_correctly_formatted(results_list) -> bool:
     return correctly_formatted
 
 
-def ask_guess_results(guess_word=''):
+def ask_guess_results(guess_word='', guess_number=None):
     finished = False
     test_results = None
+    if guess_number is None:
+        guess_number_str = ''
+    else:
+        guess_number_str = ' for guess number {guess_number}'
+    clear_console()
     while not finished:
-        print('\nEnter Your Results')
+        print(f'\nEnter Your Results{guess_number_str}:')
         print(' \033[1;37;40m 0 \033[0;0m for a letter that was not in the word.')
         print(' \033[1;30;43m 1 \033[0;0m for a letter that is in the word, but is not the correct position.')
         print(' \033[1;30;42m 2 \033[0;0m for a letter is in the correct position.')
@@ -243,18 +255,19 @@ class AvailableWords:
         for letter, count in self.count_list:
             return_str += f'{letter}:{self.letter_counter[letter]}  '
         # Ranked Words
-        return_str += f'\n\nSuggestions Correct words Possible Words - Ranked by Sum of Remaining Letters:\n '
+        return_str += f'\n\nSuggestions of possible Answer Words - Ranked by Sum of Remaining Letters:\n '
         for word, rank in self.ranked_words_by_rank:
             return_str += f'{word}({rank}) '
         # allowed guess to use up remaining letters
-        return_str += f'\n\nSuggestions of Guesses to use some of the top 5 remaining letters \n' +\
-                      f' * indicates this is a possible answer:\n    '
-        for guess_word in self.guess_using_remaining:
-            if guess_word in self.remaining_words:
-                warning_str = '*'
-            else:
-                warning_str = ''
-            return_str += f'{guess_word}{warning_str}  '
+        if len(self.ranked_words_by_rank) > 1:
+            return_str += f'\n\nSuggestions of Guesses to use some of the top 5 remaining letters \n' +\
+                          f' * indicates this is a possible answer:\n    '
+            for guess_word in self.guess_using_remaining:
+                if guess_word in self.remaining_words:
+                    warning_str = '*'
+                else:
+                    warning_str = ''
+                return_str += f'{guess_word}{warning_str}  '
         # finishing up
         return_str += '\n\n'
         return return_str
@@ -275,7 +288,8 @@ class AvailableWords:
         # count the letters that remain.
         self.letter_counter = {}
         for word in list(self):
-            for letter in word:
+            letter_set = {letter for letter in word}
+            for letter in letter_set:
                 if letter not in self.letter_counter.keys():
                     self.letter_counter[letter] = 0
                 self.letter_counter[letter] += 1
@@ -312,9 +326,9 @@ class AvailableWords:
     def narrow_by_correct_place(self, letter, letter_index):
         narrowed_word_list = narrow_by_correct_place(available_answers=list(self),
                                                      letter=letter, letter_index=letter_index)
-        self.set_data(word_list=narrowed_word_list)
         self.known_letters[letter] = letter_index
         self.know_position[letter_index] = letter
+        self.set_data(word_list=narrowed_word_list)
 
     def narrow_by_usage(self, letter, letter_index):
         # track the data about this letter's usage
@@ -330,8 +344,8 @@ class AvailableWords:
 
     def narrow_by_omission(self, letter):
         narrowed_word_list = narrow_by_omission(available_answers=list(self), letter=letter)
-        self.set_data(word_list=narrowed_word_list)
         self.known_letters[letter] = False
+        self.set_data(word_list=narrowed_word_list)
 
     def add_rule(self, rule: Rule):
         if rule.is_correct_place:
@@ -344,9 +358,11 @@ class AvailableWords:
         self.known_rules.add(rule)
 
     def add_guess(self, rules_list):
+        # only one rule is create per letter guess, that rule is made on the first letter recieved
         for rule in list(rules_list):
             self.add_rule(rule=rule)
         if self.verbose:
+            clear_console()
             print(f'{len(self.remaining_words)} words are possible')
             print(f'  {self}')
 
@@ -391,9 +407,9 @@ class AvailableWords:
         self.guess_number += 1
         rules_list = []
         if guess_word is None:
-            guess_word = ask_guess_word(guess_num=self.guess_number)
+            guess_word = ask_guess_word(guess_number=self.guess_number)
         if results is None:
-            results = ask_guess_results(guess_word=guess_word)
+            results = ask_guess_results(guess_word=guess_word, guess_number=self.guess_number)
         for letter_index, letter in list(enumerate(guess_word)):
             result = results[letter_index]
             if not self.is_known_wrong_letter(letter=letter, letter_index=letter_index) \
@@ -418,6 +434,7 @@ class AvailableWords:
 
 
 def helper():
+    clear_console()
     av = AvailableWords()
     print(av)
     while len(av) > 1:
