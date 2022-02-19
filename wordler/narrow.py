@@ -2,7 +2,6 @@ import os
 from copy import deepcopy
 from operator import itemgetter
 from string import ascii_lowercase
-from typing import NamedTuple, Optional
 from read_words import words_into_list, build_by_letter_dict
 
 
@@ -197,21 +196,6 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
         known_not_used
 
 
-class Rule(NamedTuple):
-    letter: str
-    letter_index: int
-    is_used: bool
-    is_correct_place: bool
-
-
-class Guess(NamedTuple):
-    letter0: Optional[Rule] = None
-    letter1: Optional[Rule] = None
-    letter2: Optional[Rule] = None
-    letter3: Optional[Rule] = None
-    letter4: Optional[Rule] = None
-
-
 class AvailableWords:
     all_word_list = all_word_list
     index_terms = ['first', 'second', 'third', 'forth', 'fifth']
@@ -368,7 +352,7 @@ class AvailableWords:
 
     def is_known_this_position(self, letter, letter_index) -> bool:
         return letter_index in self.known_positions.keys() and letter != self.known_positions[letter_index]
-    
+
     def is_known_wrong_position(self, letter, letter_index) -> bool:
         return letter in self.known_wrong_positions.keys() and letter_index in self.known_wrong_positions[letter]
 
