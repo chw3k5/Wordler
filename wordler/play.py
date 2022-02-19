@@ -224,7 +224,7 @@ def play(qwerty_console=True):
         ess = 's'
         if w.games_number < 2:
             ess = ''
-        print(f'{w.games_number} game{ess} played, {w.available_words} words remain.')
+        print(f'{w.games_number} game{ess} played, {len(w.available_words)} words remain.')
         raw_play_again = input('\nDo you want to play again with a new word? [y,n]:\n ')
         if raw_play_again.strip().lower() in allowed_true:
             play_again = True
