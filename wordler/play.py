@@ -1,8 +1,8 @@
 from copy import copy
 from random import shuffle
 from string import ascii_lowercase
-from read_words import words_into_list
-from narrow import allowed_true, allowed_guesses, clear_console
+from read_words import all_word_list, all_answers, allowed_guesses, all_guesses
+from narrow import allowed_true, clear_console
 
 
 def get_punctuation(number_of_guesses):
@@ -38,7 +38,7 @@ def is_unknown_test(letter):
 
 class Wordle:
     allowed_letters = set(ascii_lowercase)
-    allowed_words = set(words_into_list())
+    allowed_words = all_answers
     allowed_guesses = allowed_guesses
     qwerty_order = [['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
                     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
@@ -46,8 +46,9 @@ class Wordle:
     abc_order = [['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm'],
                  ['n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']]
 
-    def __init__(self, qwerty_console=True):
+    def __init__(self, qwerty_console=True, first_word=None):
         self.qwerty_console = qwerty_console
+        self.first_word = first_word
         self.available_words = list(self.allowed_words)
         shuffle(self.available_words)
 
@@ -78,13 +79,14 @@ class Wordle:
         self.games_number += 1
 
     def get_word(self, word=None):
-        if word is None:
-            word = self.available_words.pop()
-        elif word in self.available_words:
+        if self.games_number == 1 and self.first_word is not None:
+            self.word = self.first_word
+        elif word is None:
+            self.word = self.available_words.pop()
+        try:
             self.available_words.remove(word)
-        else:
-            raise KeyError(f'The word {word} is not an allowed word.')
-        self.word = word
+        except ValueError:
+            pass
         for letter in self.word:
             if letter not in self.letter_counter.keys():
                 self.letter_counter[letter] = 0
@@ -215,9 +217,9 @@ class Wordle:
         print(self.share_text)
 
 
-def play(qwerty_console=True):
+def play(qwerty_console=True, first_word=None):
     clear_console()
-    w = Wordle(qwerty_console=qwerty_console)
+    w = Wordle(qwerty_console=qwerty_console, first_word=first_word)
     play_again = True
     while play_again:
         w.play()
@@ -236,6 +238,9 @@ if __name__ == '__main__':
     import argparse
     # set up the parser for this Script
     parser = argparse.ArgumentParser(description='Parser for play.py, a Wordle Emulator.')
+    parser.add_argument('word', type=str, default=None, nargs='?',
+                        help="An specify the first word that is used as the games solution. Good to demonstrates " +
+                             "an specific word or to debug and test.")
     parser.add_argument('--abc', dest='abc', action='store_true',
                         help="Turns on an 'ABCDEF...' letter console for keeping track of used letters. " +
                              "The default is --no-abc which displays a qwerty letter console.")
@@ -244,4 +249,4 @@ if __name__ == '__main__':
                              "for keeping track of used letters. ")
     args = parser.parse_args()
     # run the game script
-    play(qwerty_console=not args.abc)
+    play(qwerty_console=not args.abc, first_word=args.word)

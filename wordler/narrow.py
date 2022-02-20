@@ -2,15 +2,7 @@ import os
 from copy import deepcopy
 from operator import itemgetter
 from string import ascii_lowercase
-from read_words import words_into_list, build_by_letter_dict
-
-
-all_word_list = words_into_list()
-all_answers = set(all_word_list)
-dir_name = os.path.dirname(os.path.realpath(__file__))
-allowed_guesses_path = os.path.join(dir_name, 'allowed_guesses.csv')
-allowed_guesses = set(words_into_list(path=allowed_guesses_path)) | all_answers
-all_guesses = sorted(allowed_guesses)
+from read_words import build_by_letter_dict, all_guesses, all_word_list
 
 
 allowed_letters = set(ascii_lowercase)
