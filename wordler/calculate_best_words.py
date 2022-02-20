@@ -1,5 +1,5 @@
 import os
-import array
+from copy import deepcopy
 from getpass import getuser
 from multiprocessing import Pool
 from narrow import calc_remaining_words, AvailableWords
@@ -60,10 +60,10 @@ def per_word_outcomes(guess_word, known_wrong_positions_initial=None,
     for single_outcome in all_outcomes_list:
         known_wrong_positions, known_positions_this_guess, required_letter_count_this_guess,\
           available_answers,known_not_used = \
-            calc_remaining_words(known_wrong_positions=known_wrong_positions_initial,
+            calc_remaining_words(known_wrong_positions=deepcopy(known_wrong_positions_initial),
                                  available_answers=available_answers_initial,
                                  guess_word=guess_word, guess_results=single_outcome,
-                                 known_positions=known_positions_initial)
+                                 known_positions=deepcopy(known_positions_initial))
         yield len(available_answers)
 
 
