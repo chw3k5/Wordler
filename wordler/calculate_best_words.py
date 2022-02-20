@@ -2,7 +2,7 @@ import os
 from getpass import getuser
 from multiprocessing import Pool
 from copy import deepcopy
-from narrow import all_guesses, all_answers, calc_remaining_words
+from narrow import all_guesses, all_answers, calc_remaining_words, AvailableWords
 import pickle
 
 # Debug mode
@@ -108,6 +108,7 @@ def generate_all_words_outcomes(known_wrong_positions_initial=None, available_an
 
 
 def calc(known_wrong_positions_initial=None, available_answers_initial=all_answers,known_positions_initial = {}):
+    print("Calculating optimal words...")
     remaining_words_given_outcome = generate_all_words_outcomes(\
                         known_wrong_positions_initial=known_wrong_positions_initial,
                             available_answers_initial=available_answers_initial,\
@@ -129,17 +130,23 @@ def calc_outcomes(guess_words = None,guess_results= None,rerun=False, number_of_
     # want sum of length_of_list*liklyhood_of_getting_list =
     #        sum(length_of_list(all_outcomes)*(length_of_list(all_outcomes)/total_possible_words_available_for guess)
     # should equal average list length
-    if guess_words == None:
-        if rerun: #first guesses are a bit slow and only change if word banks are updated
-            remaining_words_given_outcome = calc(known_wrong_positions_initial=known_wrong_positions_initial,
+    if guess_words == None: 
+        if len(available_answers_initial) != len(all_answers): # detect if supplying rules instead of guesses and results
+            if len(available_answers_initial) > 2:
+                remaining_words_given_outcome = calc(known_wrong_positions_initial=known_wrong_positions_initial,
+                                                     available_answers_initial=available_answers_initial,
+                                                     known_positions_initial=known_positions_initial)
+        else:
+            if rerun: #first guesses are a bit slow and only change if word banks are updated
+                remaining_words_given_outcome = calc(known_wrong_positions_initial=known_wrong_positions_initial,
                                                      available_answers_initial=available_answers_initial,
                                                      known_positions_initial = known_positions_initial)
-            with open('calculated_first_guesses.pkl', 'wb') as f:
-                pickle.dump(remaining_words_given_outcome, f)
-        else:
-            open_file = open('calculated_first_guesses.pkl', "rb")
-            remaining_words_given_outcome = pickle.load(open_file)
-            open_file.close()
+                with open('calculated_first_guesses.pkl', 'wb') as f:
+                    pickle.dump(remaining_words_given_outcome, f)
+            else:
+                open_file = open('calculated_first_guesses.pkl', "rb")
+                remaining_words_given_outcome = pickle.load(open_file)
+                open_file.close()
     else:
         known_wrong_positions_initial, known_positions_initial, required_letter_count_this_guess,\
           available_answers_initial,known_not_used =calc_remaining_words(known_wrong_positions={},\
@@ -191,7 +198,7 @@ def calc_outcomes(guess_words = None,guess_results= None,rerun=False, number_of_
             if word_index == number_of_results_to_display:
                 break
             if sorted_word in available_answers_initial:
-                print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % sorted_value}) \033[0;0m')
+                print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % sorted_value})\033[0;0m')
                 answer_available = True
             else:
                 print(f'{sorted_word} | ({"%.3f" % sorted_value})')
@@ -201,17 +208,27 @@ def calc_outcomes(guess_words = None,guess_results= None,rerun=False, number_of_
             print("...")
             for word_index, (sorted_word, sorted_value) in list(enumerate(zip(sorted_words, sorted_values))):
                 if sorted_word in available_answers_initial: #{" %5d" % guess_index}
-                    print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % sorted_value}) \033[0;0m')
+                    print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % sorted_value})\033[0;0m')
                     answer_available = True
                     break
+
+def helper():
+    av = AvailableWords()
+    print(len(av.remaining_words) == len(all_answers))
+    while len(av) > 1:
+        calc_outcomes(known_wrong_positions_initial = av.known_wrong_positions,
+                          available_answers_initial = av.remaining_words,
+                          known_positions_initial = av.known_positions)
+        av.ask_guess()
 
 
 
 
 if __name__ == '__main__':
+    helper()
     #calc_outcomes(rerun=False, number_of_results_to_display=20)
-    calc_outcomes(['roate'],['01100'])
+    #calc_outcomes(['roate'],['01100'])
     #calc_outcomes(['roate', 'salon'], ['01100', '02010'])
     #calc_outcomes(['roate', 'salon','macho'], ['01100', '02010','02202'])
-    # logic is calc_after_guessing->calc_outcomes->calc->generate_all_words_outcomes->per_word_outcomes_wrapper
+    # logic is calc_outcomes->calc->generate_all_words_outcomes->per_word_outcomes_wrapper
     # ->per_word_outcomes->calc_remaining_words
