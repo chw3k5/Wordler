@@ -83,10 +83,15 @@ class Wordle:
             self.word = self.first_word
         elif word is None:
             self.word = self.available_words.pop()
+        else:
+            self.word = word
         try:
             self.available_words.remove(word)
         except ValueError:
             pass
+        self.word = self.word.strip()
+        if len(self.word) != 5:
+            raise ValueError(f'The user input word must have a length equal to 5, revived {self.word}')
         for letter in self.word:
             if letter not in self.letter_counter.keys():
                 self.letter_counter[letter] = 0
