@@ -141,11 +141,11 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
     # layer 1 the letter is in the correct place
     for unassigned_index in list(unassigned_indexes):
         if guess_results[unassigned_index] == '2':
+            correct_guess_letter = guess_word[unassigned_index]
+            if correct_guess_letter not in required_letter_count_this_guess.keys():
+                required_letter_count_this_guess[correct_guess_letter] = 0
+            required_letter_count_this_guess[correct_guess_letter] += 1
             if unassigned_index not in known_positions.keys():
-                correct_guess_letter = guess_word[unassigned_index]
-                if correct_guess_letter not in required_letter_count_this_guess.keys():
-                    required_letter_count_this_guess[correct_guess_letter] = 0
-                required_letter_count_this_guess[correct_guess_letter] += 1
                 available_answers = narrow_by_correct_place(available_answers=available_answers,
                                                             letter=correct_guess_letter, letter_index=unassigned_index)
                 known_positions_this_guess[unassigned_index] = correct_guess_letter
@@ -171,8 +171,9 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
             not_needed_guess_letter = guess_word[unassigned_index]
             if not_needed_guess_letter in required_letter_count_this_guess.keys():
                 # this letter is used, but not the number of times it occurs in the guess word
-                narrow_by_max_usage(available_answers=available_answers, letter=not_needed_guess_letter,
-                                    max_letter_occurrences=required_letter_count_this_guess[not_needed_guess_letter])
+                available_answers = \
+                    narrow_by_max_usage(available_answers=available_answers, letter=not_needed_guess_letter,
+                                        max_letter_occurrences=required_letter_count_this_guess[not_needed_guess_letter])
                 if not_needed_guess_letter not in known_wrong_positions.keys():
                     known_wrong_positions[not_needed_guess_letter] = set()
                 known_wrong_positions[not_needed_guess_letter].add(unassigned_index)

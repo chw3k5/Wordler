@@ -244,7 +244,7 @@ if __name__ == '__main__':
     # set up the parser for this Script
     parser = argparse.ArgumentParser(description='Parser for play.py, a Wordle Emulator.')
     parser.add_argument('word', type=str, default=None, nargs='?',
-                        help="An specify the first word that is used as the games solution. Good to demonstrates " +
+                        help="An specify the first word that is used as the game's solution. Good to demonstrates " +
                              "an specific word or to debug and test.")
     parser.add_argument('--abc', dest='abc', action='store_true',
                         help="Turns on an 'ABCDEF...' letter console for keeping track of used letters. " +
