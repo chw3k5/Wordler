@@ -38,9 +38,6 @@ elif current_user in "jdw8":
 else:
     multiprocessing_threads = balanced_threads
 
-first_guess = 'raise'
-outcome = '0000'
-
 
 def calculate_average_remaining_list_length(remaining_words_given_outcome, length_remaining_words):
     average_remaining_list_length = []
@@ -82,14 +79,14 @@ def generate_all_words_outcomes(known_wrong_positions_initial=None, available_an
     if multiprocessing_threads is None:
         all_outcomes_list = []
         for guess_index, guess_word in list(enumerate(all_guesses)):
-            this_word_outcomes =per_word_outcomes_wrapper(args=(guess_index, guess_word,known_wrong_positions_initial,
-                                                                    available_answers_initial,known_positions_initial))
+            this_word_outcomes = per_word_outcomes_wrapper(args=(guess_index, guess_word,known_wrong_positions_initial,
+                                                                 available_answers_initial,known_positions_initial))
 
             all_outcomes_list.append(this_word_outcomes)
 
     else:
-        all_args = [(guess_index, guess_word, known_wrong_positions_initial, available_answers_initial,\
-                         known_positions_initial) for guess_index, guess_word in list(enumerate(all_guesses))]
+        all_args = [(guess_index, guess_word, known_wrong_positions_initial, available_answers_initial,
+                     known_positions_initial) for guess_index, guess_word in list(enumerate(all_guesses))]
         with Pool(multiprocessing_threads) as p:
             all_outcomes_list = p.map(per_word_outcomes_wrapper, all_args)
     return all_outcomes_list
