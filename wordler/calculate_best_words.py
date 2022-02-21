@@ -73,7 +73,7 @@ def per_word_outcomes_wrapper(args):
       list(per_word_outcomes(guess_word=guess_word, known_wrong_positions_initial=known_wrong_positions_initial,
                              available_answers_initial=available_answers_initial,
                              known_positions_initial=known_positions_initial))
-    print(f'{" %5d" % guess_index}, {guess_word}, outcomes max length:{max(this_word_outcomes)}', end='\r')
+    print(f'{" %3d" % (100*guess_index/len(all_guesses))}% done', end='\r')
     return this_word_outcomes
 
 
@@ -91,7 +91,8 @@ def generate_all_words_outcomes(known_wrong_positions_initial=None, available_an
         all_args = [(guess_index, guess_word, known_wrong_positions_initial, available_answers_initial,\
                          known_positions_initial) for guess_index, guess_word in list(enumerate(all_guesses))]
         with Pool(multiprocessing_threads) as p:
-            all_outcomes_list = p.map(per_word_outcomes_wrapper, all_args)
+            #all_outcomes_list = p.map(per_word_outcomes_wrapper, all_args)
+            all_outcomes_list = list(p.imap(per_word_outcomes_wrapper, all_args))
     return all_outcomes_list
 
 
@@ -108,7 +109,7 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
                   known_wrong_positions_initial=None, available_answers_initial=all_answers,
                   known_positions_initial=None):
     """
-        There are 3**5 possible outcomes
+    There are 3**5 possible outcomes
     it seems given every possible outcome every word is possible
     want sum of length_of_list*liklyhood_of_getting_list =
            sum(length_of_list(all_outcomes)*(length_of_list(all_outcomes)/total_possible_words_available_for guess)
@@ -154,8 +155,10 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
 
     if len(available_answers_initial) == 2:
         print("Only two answers left pick one of :",available_answers_initial)
+        return available_answers_initial, [1,1], available_answers_initial #make return compatible
     elif len(available_answers_initial) == 1:
         print("Only answer remaining is  ", available_answers_initial)
+        return available_answers_initial, [0], available_answers_initial #make return compatible
     else:
 
         print("length of possible answers", len(available_answers_initial))
@@ -192,6 +195,9 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
                     print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % sorted_value})\033[0;0m')
                     answer_available = True
                     break
+        return sorted_words, sorted_values, available_answers_initial
+
+    
 
 def helper():
     av = AvailableWords()
