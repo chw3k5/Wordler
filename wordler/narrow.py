@@ -191,6 +191,7 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
 
 class AvailableWords:
     all_word_list = all_word_list
+    all_guesses = all_guesses
     index_terms = ['first', 'second', 'third', 'forth', 'fifth']
 
     def __init__(self, verbose: bool = True):
@@ -198,6 +199,7 @@ class AvailableWords:
         # data structures that get initialized with self.reset()
         self.guess_number = None
         self.remaining_words = None
+        self.remaining_guesses = None
         self.possible_words_dict = None
         self.letter_counter = None
         self.known_rules = None
@@ -278,7 +280,7 @@ class AvailableWords:
         self.known_wrong_positions = {}
         self.known_not_used = set()
         self.wrong_guesses = set()
-        self.set_data(word_list=deepcopy(self.all_word_list))
+        self.set_data(word_list=deepcopy(self.all_word_list), guesses=deepcopy(self.all_guesses))
 
     def count_letters(self):
         # count the letters that remain.
@@ -313,8 +315,9 @@ class AvailableWords:
         self.ranked_words_by_rank = sorted([(word, self.get_rank_value(word)) for word in list(self)],
                                            key=itemgetter(1), reverse=True)
 
-    def set_data(self, word_list):
+    def set_data(self, word_list, guesses):
         self.remaining_words = word_list
+        self.remaining_guesses = guesses
         self.possible_words_dict = build_by_letter_dict(word_list=self.remaining_words)
         self.count_letters()
         self.rank_words()
@@ -330,7 +333,13 @@ class AvailableWords:
             if letter not in self.required_letter_count.keys() or \
                     required_letter_count_this_guess[letter] > self.required_letter_count[letter]:
                 self.required_letter_count[letter] = required_letter_count_this_guess[letter]
-        self.set_data(word_list=available_answers)
+
+        _known_wrong_positions, _known_positions_this_guess, _required_letter_count_this_guess, available_guesses,\
+            _known_not_used = \
+            calc_remaining_words(known_wrong_positions=self.known_wrong_positions,
+                                 available_answers=self.remaining_guesses, guess_word=guess_word,
+                                 guess_results=guess_results, known_positions=self.known_positions)
+        self.set_data(word_list=available_answers, guesses=available_guesses)
         # display the results
         if self.verbose:
             clear_console()

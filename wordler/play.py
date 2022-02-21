@@ -1,8 +1,9 @@
 from copy import copy
 from random import shuffle
 from string import ascii_lowercase
+
 from read_words import all_word_list, all_answers, allowed_guesses, all_guesses
-from narrow import allowed_true, clear_console
+from narrow import allowed_true, clear_console, AvailableWords
 
 
 def get_punctuation(number_of_guesses):
@@ -40,18 +41,23 @@ class Wordle:
     allowed_letters = set(ascii_lowercase)
     allowed_words = all_answers
     allowed_guesses = allowed_guesses
+
     qwerty_order = [['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
                     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
                     ['z', 'x', 'c', 'v', 'b', 'n', 'm']]
     abc_order = [['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm'],
                  ['n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']]
 
-    def __init__(self, qwerty_console=True, first_word=None):
+    def __init__(self, qwerty_console=True, first_word=None, hard_mode=False):
+        # settings
         self.qwerty_console = qwerty_console
         self.first_word = first_word
-        self.available_words = list(self.allowed_words)
+        self.hard_mode = hard_mode
+        # data initialization
+        self.available_words = all_word_list
         shuffle(self.available_words)
-
+        self.games_number = 0
+        # Data that is re-initialized between games
         self.remaining_guesses = None
         self.number_of_guesses = None
         self.share_text = None
@@ -62,14 +68,16 @@ class Wordle:
         self.known_wrong = None
         self.letter_counter = None
         self.word = None
-
-        self.games_number = 0
+        self.av = None
 
     def reset(self):
         self.number_of_guesses = 0
         self.share_text = ''
         self.display_history = ''
+        if self.hard_mode:
+            self.av = AvailableWords(verbose=False)
         self.remaining_guesses = copy(self.allowed_guesses)
+
         self.unknown = copy(self.allowed_letters)
         self.known_in_right_place = set()
         self.known_in_wrong_place = set()
@@ -100,12 +108,15 @@ class Wordle:
     def ask_for_word(self):
         guess_word = None
         self.number_of_guesses += 1
+        if self.hard_mode:
+            mode_str = '\n(Hard-mode, guess must be possible answer)'
+        else:
+            mode_str = ''
         while guess_word is None:
-            raw_word = input(f"\nEnter guess number: {self.number_of_guesses}\n ")
+            raw_word = input(f"{mode_str}\nEnter guess number: {self.number_of_guesses}\n ")
             test_word = raw_word.strip().lower()
             if len(test_word) == 5 and test_word in self.remaining_guesses:
                 guess_word = test_word
-        self.remaining_guesses.remove(guess_word)
         return guess_word
 
     def remove_unknown(self, letter):
@@ -198,9 +209,17 @@ class Wordle:
     def print_display(self, guess_word):
         text_str = ''
         index_to_guess_letter_and_display_type = self.determine_test_types(guess_word)
+        guess_results = ''
         for guess_index in sorted(index_to_guess_letter_and_display_type.keys()):
             guess_letter, display_type = index_to_guess_letter_and_display_type[guess_index]
             text_str += self.make_letter_text(guess_letter=guess_letter, display_type=display_type)
+            guess_results += display_type
+        if self.hard_mode:
+            self.av.add_guess(guess_word=guess_word, guess_results=guess_results)
+            self.remaining_guesses = set(self.av.remaining_guesses)
+        else:
+            self.remaining_guesses.remove(guess_word)
+
         console_str = self.get_console_text()
         self.display_history += text_str + '\n'
         self.share_text += '\n'
@@ -222,9 +241,9 @@ class Wordle:
         print(self.share_text)
 
 
-def play(qwerty_console=True, first_word=None):
+def play(qwerty_console=True, first_word=None, hard_mode=False):
     clear_console()
-    w = Wordle(qwerty_console=qwerty_console, first_word=first_word)
+    w = Wordle(qwerty_console=qwerty_console, first_word=first_word, hard_mode=hard_mode)
     play_again = True
     while play_again:
         w.play()
@@ -252,6 +271,14 @@ if __name__ == '__main__':
     parser.add_argument('--no-abc', dest='abc', action='store_false', default=True,
                         help="Turns off an 'ABCDEF...' letter console for and uses the default qwerty console " +
                              "for keeping track of used letters. ")
+    parser.add_argument('--hard', dest='hard', action='store_true',
+                        help="Turns on Wordle Hard-mode. Hard mode restricts the allowed guessed to solve the puzzle." +
+                             "Guesses in Hard mode must be possible solutions to the puzzle. The default is " +
+                             "--no-hard with all allowed guesses can be used to narrow the field of remaining letters.")
+    parser.add_argument('--no-hard', dest='hard', action='store_false', default=False,
+                        help="Turns off Wordle Hard-mode. Hard mode restricts the allowed guessed to solve the " +
+                             "puzzle. This setting is the default in witch all allowed guesses can be used to narrow " +
+                             "the field of remaining letters.")
     args = parser.parse_args()
     # run the game script
-    play(qwerty_console=not args.abc, first_word=args.word)
+    play(qwerty_console=not args.abc, first_word=args.word, hard_mode=args.hard)
