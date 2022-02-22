@@ -49,7 +49,7 @@ def calculate_average_remaining_list_length(remaining_words_given_outcome, lengt
 
 
 def per_word_outcomes(guess_word, known_wrong_positions_initial=None,
-                      available_answers_initial=all_answers, known_positions_initial=None):
+                      available_answers_initial=deepcopy(all_answers), known_positions_initial=None):
     if known_wrong_positions_initial is None:
         known_wrong_positions_initial = {}
     if known_positions_initial is None:
@@ -74,8 +74,10 @@ def per_word_outcomes_wrapper(args):
     return this_word_outcomes
 
 
-def generate_all_words_outcomes(known_wrong_positions_initial=None, available_answers_initial=all_answers,
+def generate_all_words_outcomes(known_wrong_positions_initial=None, available_answers_initial=None,
                                 known_positions_initial=None):
+    if available_answers_initial is None:
+        available_answers_initial = deepcopy(all_answers)
     if multiprocessing_threads is None:
         all_outcomes_list = []
         for guess_index, guess_word in list(enumerate(all_guesses)):
@@ -93,7 +95,9 @@ def generate_all_words_outcomes(known_wrong_positions_initial=None, available_an
     return all_outcomes_list
 
 
-def calc(known_wrong_positions_initial=None, available_answers_initial=all_answers, known_positions_initial=None):
+def calc(known_wrong_positions_initial=None, available_answers_initial=None, known_positions_initial=None):
+    if available_answers_initial is None:
+        available_answers_initial = deepcopy(all_answers)
     print("Calculating optimal words...")
     remaining_words_given_outcome = generate_all_words_outcomes(
                         known_wrong_positions_initial=known_wrong_positions_initial,
@@ -103,8 +107,10 @@ def calc(known_wrong_positions_initial=None, available_answers_initial=all_answe
 
 
 def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_results_to_display=25,
-                  known_wrong_positions_initial=None, available_answers_initial=all_answers,
+                  known_wrong_positions_initial=None, available_answers_initial=None,
                   known_positions_initial=None):
+    if available_answers_initial is None:
+        available_answers_initial = deepcopy(all_answers)
     """
     There are 3**5 possible outcomes
     it seems given every possible outcome every word is possible
@@ -131,7 +137,7 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
     else:
         known_wrong_positions_initial, known_positions_initial, required_letter_count_this_guess, \
           available_answers_initial, known_not_used = \
-            calc_remaining_words(known_wrong_positions={}, available_answers=all_answers,guess_word=guess_words[0],
+            calc_remaining_words(known_wrong_positions={}, available_answers=deepcopy(all_answers),guess_word=guess_words[0],
                                  guess_results=guess_results[0], known_positions={})
 
         for i in range(1, len(guess_words)):

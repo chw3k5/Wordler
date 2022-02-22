@@ -4,6 +4,7 @@ from string import ascii_lowercase
 
 from read_words import all_word_list, all_answers, allowed_guesses, all_guesses
 from narrow import allowed_true, clear_console, AvailableWords
+from hint import GetHint
 
 
 def get_punctuation(number_of_guesses):
@@ -39,8 +40,8 @@ def is_unknown_test(letter):
 
 class Wordle:
     allowed_letters = set(ascii_lowercase)
-    allowed_words = all_answers
-    allowed_guesses = allowed_guesses
+    allowed_words = copy(all_answers)
+    allowed_guesses = copy(allowed_guesses)
 
     qwerty_order = [['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
                     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
@@ -67,11 +68,15 @@ class Wordle:
         self.known_in_wrong_place = None
         self.known_wrong = None
         self.letter_counter = None
+        self.guessed_words = None
+        self.guessed_results = None
         self.word = None
         self.av = None
 
     def reset(self):
         self.number_of_guesses = 0
+        self.guessed_words = []
+        self.guessed_results = []
         self.share_text = ''
         self.display_history = ''
         if self.hard_mode:
@@ -115,6 +120,9 @@ class Wordle:
         while guess_word is None:
             raw_word = input(f"{mode_str}\nEnter guess number: {self.number_of_guesses}\n ")
             test_word = raw_word.strip().lower()
+            if  test_word == 'hint':
+                get_hint = GetHint(hint_type=None)
+                test_word = get_hint.get_hint(guess_words=self.guessed_words, guess_results=self.guessed_results)
             if len(test_word) == 5 and test_word in self.remaining_guesses:
                 guess_word = test_word
         return guess_word
@@ -214,6 +222,10 @@ class Wordle:
             guess_letter, display_type = index_to_guess_letter_and_display_type[guess_index]
             text_str += self.make_letter_text(guess_letter=guess_letter, display_type=display_type)
             guess_results += display_type
+        # record the results 
+        self.guessed_words.append(guess_word)
+        self.guessed_results.append(guess_results)
+        # update the allowed guesses
         if self.hard_mode:
             self.av.add_guess(guess_word=guess_word, guess_results=guess_results)
             self.remaining_guesses = set(self.av.remaining_guesses)

@@ -190,8 +190,8 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
 
 
 class AvailableWords:
-    all_word_list = all_word_list
-    all_guesses = all_guesses
+    all_word_list = deepcopy(all_word_list)
+    all_guesses = deepcopy(all_guesses)
     index_terms = ['first', 'second', 'third', 'forth', 'fifth']
 
     def __init__(self, verbose: bool = True):
