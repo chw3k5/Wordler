@@ -1,3 +1,4 @@
+import random
 from copy import copy
 from random import shuffle
 from string import ascii_lowercase
@@ -119,10 +120,16 @@ class Wordle:
         else:
             mode_str = ''
         while guess_word is None:
-            raw_word = input(f"{mode_str}\nEnter guess number: {self.number_of_guesses}\n ")
+            if self.allow_hint:
+                hint_type = random.choice(GetHint.hint_types)
+                hint_str = f' (type "hint" to get a hint word from {hint_type[0].upper() + hint_type[1:]})'
+            else:
+                hint_str = ''
+                hint_type=None
+            raw_word = input(f"{mode_str}\nEnter guess number: {self.number_of_guesses}{hint_str}\n ")
             test_word = raw_word.strip().lower()
             if self.allow_hint and test_word == 'hint':
-                get_hint = GetHint(hint_type=None)
+                get_hint = GetHint(hint_type=hint_type, hard_mode=self.hard_mode)
                 test_word = get_hint.get_hint(guess_words=self.guessed_words, guess_results=self.guessed_results)
             if len(test_word) == 5 and test_word in self.remaining_guesses:
                 guess_word = test_word
