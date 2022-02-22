@@ -157,6 +157,22 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
             is_used_guess_letter = guess_word[unassigned_index]
             if is_used_guess_letter not in required_letter_count_this_guess.keys():
                 required_letter_count_this_guess[is_used_guess_letter] = 0
+            # deal with repeated letter guesses test case aahed 10100 word macho should be removed
+            if guess_word.count(guess_word[unassigned_index])>1:# #handle repeated letter guesses
+                repeated = [] 
+                for letter in guess_word:
+                    if letter == guess_word[unassigned_index]:
+                        repeated.append(1)
+                    else:
+                        repeated.append(0)
+                for index in range(0,len(guess_word)):
+                    #        if repeated     and      is not the 1 we are examining and = 0
+
+                    if (repeated[index] == 1 and index != unassigned_index and guess_results[index] == '0' ): #other 1s or 2s allowed
+                        if guess_word[unassigned_index] not in known_wrong_positions.keys():
+                            known_wrong_positions[guess_word[unassigned_index]] = set()
+                        known_wrong_positions[guess_word[unassigned_index]].add(index)
+
             required_letter_count_this_guess[is_used_guess_letter] += 1
             known_wrong_positions, available_answers = \
                 narrow_by_usage_wrapper(available_answers=available_answers,
