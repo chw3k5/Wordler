@@ -174,7 +174,7 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
                 known_positions_this_guess[unassigned_index] = correct_guess_letter
             unassigned_indexes.remove(unassigned_index)
 
-    # layer 2, for the remaining letters check if they are in the reaming part of the word
+    # layer 2, for the remaining letters check if they are in the remaining part of the guess word
     for unassigned_index in list(unassigned_indexes):
         if guess_results[unassigned_index] == '1':
             is_used_guess_letter = guess_word[unassigned_index]
