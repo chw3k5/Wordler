@@ -209,6 +209,7 @@ class AvailableWords:
     all_word_list = deepcopy(all_word_list)
     all_guesses = deepcopy(all_guesses)
     index_terms = ['first', 'second', 'third', 'forth', 'fifth']
+    vowels = {'a', 'e', 'i', 'o', 'u', 'y'}
 
     def __init__(self, verbose: bool = True):
         self.verbose = verbose
@@ -225,9 +226,13 @@ class AvailableWords:
         self.known_not_used = None
         self.wrong_guesses = None
         self.remaining_letters = None
+        self.remaining_vowels = None
         self.count_list = None
         self.guess_using_remaining = None
         self.ranked_words_by_rank = None
+        self.ranked_guesses_by_rank = None
+        self.ranked_vowel_words_by_rank = None
+        self.ranked_vowel_guesses_by_rank = None
         # the method the set/restores the initial state
         self.reset()
 
@@ -308,6 +313,7 @@ class AvailableWords:
                     self.letter_counter[letter] = 0
                 self.letter_counter[letter] += 1
         self.remaining_letters = set(self.letter_counter.keys()) - set(self.required_letter_count.keys())
+        self.remaining_vowels = self.remaining_letters & self.vowels
         self.count_list = sorted([(letter, self.letter_counter[letter]) for letter in self.remaining_letters],
                                  key=itemgetter(1), reverse=True)
         # get best guesses using the remaining letters
@@ -319,17 +325,30 @@ class AvailableWords:
                 break
         self.guess_using_remaining = guess_using_letters(letters=top_5_remaining_letters)
 
-    def get_rank_value(self, word):
+    def get_rank_value(self, word, only_vowels=False):
         letter_set = {letter for letter in word}
         value = 0
+        if only_vowels:
+            remaining_letter_set = self.remaining_vowels
+        else:
+            remaining_letter_set = self.remaining_letters
         for letter in letter_set:
-            if letter in self.remaining_letters:
+            if letter in remaining_letter_set:
                 value += self.letter_counter[letter]
         return value
 
     def rank_words(self):
         self.ranked_words_by_rank = sorted([(word, self.get_rank_value(word)) for word in list(self)],
                                            key=itemgetter(1), reverse=True)
+        self.ranked_guesses_by_rank = sorted([(word, self.get_rank_value(word)) for word in self.remaining_guesses],
+                                             key=itemgetter(1), reverse=True)
+
+    def get_max_vowels(self):
+        self.ranked_vowel_words_by_rank = sorted([(word, self.get_rank_value(word, only_vowels=True))
+                                                  for word in list(self)], key=itemgetter(1), reverse=True)
+        self.ranked_vowel_guesses_by_rank = sorted([(word, self.get_rank_value(word, only_vowels=True))
+                                                  for word in self.remaining_guesses], key=itemgetter(1), reverse=True)
+
 
     def set_data(self, word_list, guesses):
         self.remaining_words = word_list
@@ -337,6 +356,7 @@ class AvailableWords:
         self.possible_words_dict = build_by_letter_dict(word_list=self.remaining_words)
         self.count_letters()
         self.rank_words()
+        self.get_max_vowels()
 
     def add_guess(self, guess_word, guess_results):
         self.known_wrong_positions, known_positions_this_guess, required_letter_count_this_guess, available_answers,\
