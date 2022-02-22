@@ -50,12 +50,13 @@ class Wordle:
     abc_order = [['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm'],
                  ['n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']]
 
-    def __init__(self, qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True):
+    def __init__(self, qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True, hint_type=None):
         # settings
         self.qwerty_console = qwerty_console
         self.first_word = first_word
         self.hard_mode = hard_mode
         self.allow_hint = allow_hint
+        self.hint_type = hint_type
         # data initialization
         self.available_words = all_word_list
         shuffle(self.available_words)
@@ -121,7 +122,10 @@ class Wordle:
             mode_str = ''
         while guess_word is None:
             if self.allow_hint:
-                hint_type = random.choice(GetHint.hint_types)
+                if self.hint_type is None:
+                    hint_type = random.choice(GetHint.hint_types)
+                else:
+                    hint_type = self.hint_type
                 hint_str = f' (type "hint" to get a hint word from {hint_type[0].upper() + hint_type[1:]})'
             else:
                 hint_str = ''
@@ -261,9 +265,10 @@ class Wordle:
         print(self.share_text)
 
 
-def play(qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True):
+def play(qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True, hint_type=None):
     clear_console()
-    w = Wordle(qwerty_console=qwerty_console, first_word=first_word, hard_mode=hard_mode, allow_hint=allow_hint)
+    w = Wordle(qwerty_console=qwerty_console, first_word=first_word, hard_mode=hard_mode, allow_hint=allow_hint,
+               hint_type=hint_type)
     play_again = True
     while play_again:
         w.play()
@@ -279,6 +284,15 @@ def play(qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True)
 
 
 if __name__ == '__main__':
+    hint_types_str = ''
+    for hint_type_index, hint_type in list(enumerate(GetHint.hint_types)):
+        if hint_type_index == len(GetHint.hint_types) - 1:
+            concat_str = ''
+        elif hint_type_index == len(GetHint.hint_types) - 2:
+            concat_str = ', and '
+        else:
+            concat_str = ', '
+        hint_types_str += f'{hint_type[0].upper() + hint_type[1:]}{concat_str}'
     import argparse
     # set up the parser for this Script
     parser = argparse.ArgumentParser(description='Parser for play.py, a Wordle Emulator.')
@@ -303,12 +317,31 @@ if __name__ == '__main__':
                         help="Allows a hint to be available during game play. Type the word 'hint' instead of a five " +
                               "letter guess activate this feature, this lets the game choose a possible answer or " +
                               "allowed guess for you. The game can play itself by repeating using 'hint'. Default " +
-                              "is that hints are allowed."
-                        )
+                              "is that hints are allowed.")
     parser.add_argument('--no-hint', dest='hint', action='store_false',
                         help="Disables a hint to be available during game play. Typing the word 'hint' has no effect " +
                               "when the --no-hint augmnet is given. By default, hints are allowed." +
                               "is that hints are allowed.")
+    parser.add_argument('--hint-type', dest='hint_type', metavar='Name', nargs=1, default=None, type=str,
+                        help=f'Specify a Hint personally. {len(GetHint.hint_types)} hint types are available: ' +
+                             f'{hint_types_str}.\n' +
+                             f'Caleb wants to guess the right answer in the next turn. Tries to eliminate unused ' +
+                             f'letters but will not sacrifice a possible right answer in the next guess. Plays the ' +
+                             f'the same way on regular or hard-mode. Goes big and risks it all to win. ' +
+                             f'Natalie narrows the field of letters by seeking out the remaining vowels, the ' +
+                             f'heart of the word. Natalie uses words that are allowed guesses, a bigger set of words ' +
+                             f'then the just the allowed solutions that Caleb uses. Once all the vowels are accounted ' +
+                             f'for, Natalie uses Jada\'s strategy ' +
+                             f'Jada delivers hints that eliminate the unknown letters of that are the most common to ' +
+                             f'remaining allowed guesses, trying to narrow the possible remaining answer words as ' +
+                             f'quickly as possible, until only one or two possible solutions remain and then those ' +
+                             f'are the hints returned. Jada and Natalie both know how ' +
+                             f'to follow the rules in the more restrictive hard mode.')
     args = parser.parse_args()
+    if args.hint_type is None:
+        hint_type = None
+    else:
+        hint_type = args.hint_type[0]
     # run the game script
-    play(qwerty_console=not args.abc, first_word=args.word, hard_mode=args.hard, allow_hint=args.hint)
+    play(qwerty_console=not args.abc, first_word=args.word, hard_mode=args.hard, allow_hint=args.hint,
+         hint_type=hint_type)
