@@ -102,6 +102,18 @@ def narrow_by_correct_place(available_answers, letter, letter_index):
     return [test_word for test_word in available_answers if letter == test_word[letter_index]]
 
 
+def narrow_by_omission(available_answers, letter):
+    return [test_word for test_word in available_answers if letter not in test_word]
+
+
+def narrow_by_max_usage(available_answers, letter, max_letter_occurrences):
+    return [test_word for test_word in available_answers if test_word.count(letter) <= max_letter_occurrences]
+
+
+def narrow_by_wrong_place(available_answers, letter, letter_index):
+    return [test_word for test_word in available_answers if test_word[letter_index] != letter]
+
+
 def narrow_by_usage(available_answers, known_wrong_positions, letter, min_letter_occurrences):
     for test_word in available_answers:
         # the letter must be in the word the correct number of times
@@ -125,12 +137,23 @@ def narrow_by_usage_wrapper(available_answers, known_wrong_positions, letter, le
     return known_wrong_positions, remaining
 
 
-def narrow_by_omission(available_answers, letter):
-    return [test_word for test_word in available_answers if letter not in test_word]
-
-
-def narrow_by_max_usage(available_answers, letter, max_letter_occurrences):
-    return [test_word for test_word in available_answers if test_word.count(letter) <= max_letter_occurrences]
+def narrow_by_wrong_place_jordan(known_wrong_positions, guess_word, guess_results, test_letter, test_letter_index):
+    # deal with repeated letter guesses test case aahed 10100 word macho should be removed
+    if guess_word.count(test_letter) > 1:  # handle repeated letter guesses
+        repeated = []
+        for word_letter in guess_word:
+            if word_letter == test_letter:
+                repeated.append(1)
+            else:
+                repeated.append(0)
+        for word_index in range(len(guess_word)):
+            # if repeated and is not the 1 we are examining and = 0
+            # other 1s or 2s allowed
+            if repeated[word_index] == 1 and word_index != test_letter_index and guess_results[word_index] == '0':
+                if test_letter not in known_wrong_positions.keys():
+                    known_wrong_positions[test_letter] = set()
+                known_wrong_positions[test_letter].add(word_index)
+    return known_wrong_positions
 
 
 def calc_remaining_words(known_wrong_positions, known_positions, available_answers, guess_word, guess_results):
@@ -157,23 +180,14 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
             is_used_guess_letter = guess_word[unassigned_index]
             if is_used_guess_letter not in required_letter_count_this_guess.keys():
                 required_letter_count_this_guess[is_used_guess_letter] = 0
-            # deal with repeated letter guesses test case aahed 10100 word macho should be removed
-            if guess_word.count(guess_word[unassigned_index])>1:# #handle repeated letter guesses
-                repeated = [] 
-                for letter in guess_word:
-                    if letter == guess_word[unassigned_index]:
-                        repeated.append(1)
-                    else:
-                        repeated.append(0)
-                for index in range(0,len(guess_word)):
-                    #        if repeated     and      is not the 1 we are examining and = 0
-
-                    if (repeated[index] == 1 and index != unassigned_index and guess_results[index] == '0' ): #other 1s or 2s allowed
-                        if guess_word[unassigned_index] not in known_wrong_positions.keys():
-                            known_wrong_positions[guess_word[unassigned_index]] = set()
-                        known_wrong_positions[guess_word[unassigned_index]].add(index)
-
             required_letter_count_this_guess[is_used_guess_letter] += 1
+
+            # known_wrong_positions = narrow_by_wrong_place_jordan(known_wrong_positions=known_wrong_positions,
+            #                                                      guess_word=guess_word,
+            #                                                      guess_results=guess_results,
+            #                                                      test_letter=is_used_guess_letter,
+            #                                                      test_letter_index=unassigned_index)
+
             known_wrong_positions, available_answers = \
                 narrow_by_usage_wrapper(available_answers=available_answers,
                                         known_wrong_positions=known_wrong_positions,
@@ -190,9 +204,15 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
                 available_answers = \
                     narrow_by_max_usage(available_answers=available_answers, letter=not_needed_guess_letter,
                                         max_letter_occurrences=required_letter_count_this_guess[not_needed_guess_letter])
+                # we also need to eliminate the usage of this particular letter in this position
+                # example case: 'aahed' with a result of 10100 (answer is 'coach'), the word 'macho' should be removed
+                available_answers = narrow_by_wrong_place(available_answers=available_answers,
+                                                          letter=not_needed_guess_letter, letter_index=unassigned_index)
+                # record know wrong positions
                 if not_needed_guess_letter not in known_wrong_positions.keys():
                     known_wrong_positions[not_needed_guess_letter] = set()
                 known_wrong_positions[not_needed_guess_letter].add(unassigned_index)
+
             else:
                 # this letter is not in the word at all
                 available_answers = narrow_by_omission(available_answers=available_answers,
@@ -347,8 +367,7 @@ class AvailableWords:
         self.ranked_vowel_words_by_rank = sorted([(word, self.get_rank_value(word, only_vowels=True))
                                                   for word in list(self)], key=itemgetter(1), reverse=True)
         self.ranked_vowel_guesses_by_rank = sorted([(word, self.get_rank_value(word, only_vowels=True))
-                                                  for word in self.remaining_guesses], key=itemgetter(1), reverse=True)
-
+                                                   for word in self.remaining_guesses], key=itemgetter(1), reverse=True)
 
     def set_data(self, word_list, guesses):
         self.remaining_words = word_list
