@@ -58,7 +58,7 @@ class Wordle:
         self.allow_hint = allow_hint
         self.hint_type = hint_type
         # data initialization
-        self.available_words = all_word_list
+        self.available_words = copy(all_word_list)
         shuffle(self.available_words)
         self.games_number = 0
         # Data that is re-initialized between games
@@ -104,7 +104,8 @@ class Wordle:
         try:
             self.available_words.remove(word)
         except ValueError:
-            pass
+            # we need to disable hints when a word not from the all_answers set is used.
+            self.allow_hint = False
         self.word = self.word.strip()
         if len(self.word) != 5:
             raise ValueError(f'The user input word must have a length equal to 5, revived {self.word}')
