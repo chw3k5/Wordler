@@ -49,11 +49,12 @@ class Wordle:
     abc_order = [['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm'],
                  ['n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']]
 
-    def __init__(self, qwerty_console=True, first_word=None, hard_mode=False):
+    def __init__(self, qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True):
         # settings
         self.qwerty_console = qwerty_console
         self.first_word = first_word
         self.hard_mode = hard_mode
+        self.allow_hint = allow_hint
         # data initialization
         self.available_words = all_word_list
         shuffle(self.available_words)
@@ -120,7 +121,7 @@ class Wordle:
         while guess_word is None:
             raw_word = input(f"{mode_str}\nEnter guess number: {self.number_of_guesses}\n ")
             test_word = raw_word.strip().lower()
-            if  test_word == 'hint':
+            if self.allow_hint and test_word == 'hint':
                 get_hint = GetHint(hint_type=None)
                 test_word = get_hint.get_hint(guess_words=self.guessed_words, guess_results=self.guessed_results)
             if len(test_word) == 5 and test_word in self.remaining_guesses:
@@ -253,9 +254,9 @@ class Wordle:
         print(self.share_text)
 
 
-def play(qwerty_console=True, first_word=None, hard_mode=False):
+def play(qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True):
     clear_console()
-    w = Wordle(qwerty_console=qwerty_console, first_word=first_word, hard_mode=hard_mode)
+    w = Wordle(qwerty_console=qwerty_console, first_word=first_word, hard_mode=hard_mode, allow_hint=allow_hint)
     play_again = True
     while play_again:
         w.play()
@@ -291,6 +292,16 @@ if __name__ == '__main__':
                         help="Turns off Wordle Hard-mode. Hard mode restricts the allowed guessed to solve the " +
                              "puzzle. This setting is the default in witch all allowed guesses can be used to narrow " +
                              "the field of remaining letters.")
+    parser.add_argument('--hint', dest='hint', action='store_true', default=True,
+                        help="Allows a hint to be available during game play. Type the word 'hint' instead of a five " +
+                              "letter guess activate this feature, this lets the game choose a possible answer or " +
+                              "allowed guess for you. The game can play itself by repeating using 'hint'. Default " +
+                              "is that hints are allowed."
+                        )
+    parser.add_argument('--no-hint', dest='hint', action='store_false',
+                        help="Disables a hint to be available during game play. Typing the word 'hint' has no effect " +
+                              "when the --no-hint augmnet is given. By default, hints are allowed." +
+                              "is that hints are allowed.")
     args = parser.parse_args()
     # run the game script
-    play(qwerty_console=not args.abc, first_word=args.word, hard_mode=args.hard)
+    play(qwerty_console=not args.abc, first_word=args.word, hard_mode=args.hard, allow_hint=args.hint)
