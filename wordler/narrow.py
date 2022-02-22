@@ -195,15 +195,16 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
                                         min_letter_occurrences=required_letter_count_this_guess[is_used_guess_letter])
             unassigned_indexes.remove(unassigned_index)
 
-    # these letters are not used or are not used in this number
+    # letters that are not used or are not used in this number and not used at a given index in the solution word
     for unassigned_index in list(unassigned_indexes):
         if guess_results[unassigned_index] == '0':
             not_needed_guess_letter = guess_word[unassigned_index]
             if not_needed_guess_letter in required_letter_count_this_guess.keys():
                 # this letter is used, but not the number of times it occurs in the guess word
+                max_letter_occurrences = required_letter_count_this_guess[not_needed_guess_letter]
                 available_answers = \
                     narrow_by_max_usage(available_answers=available_answers, letter=not_needed_guess_letter,
-                                        max_letter_occurrences=required_letter_count_this_guess[not_needed_guess_letter])
+                                        max_letter_occurrences=max_letter_occurrences)
                 # we also need to eliminate the usage of this particular letter in this position
                 # example case: 'aahed' with a result of 10100 (answer is 'coach'), the word 'macho' should be removed
                 available_answers = narrow_by_wrong_place(available_answers=available_answers,
