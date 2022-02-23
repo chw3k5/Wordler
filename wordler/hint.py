@@ -1,9 +1,10 @@
 import random
 from narrow import AvailableWords
+from calculate_best_words import calc_outcomes
 
 
 class GetHint:
-    hint_types = ['caleb', 'natalie', 'jada']
+    hint_types = ['caleb', 'natalie', 'jada','jordan']
 
     def __init__(self, hint_type=None, hard_mode=False, bot_mode=False):
         # settings
@@ -40,6 +41,7 @@ class GetHint:
     def caleb(self, guess_words, guess_results, skip_calculation=False):
         if not skip_calculation:
             self.find_remaining_words(guess_words=guess_words, guess_results=guess_results)
+
         top_five_words = []
         ranked_words_by_rank = self.av.ranked_words_by_rank
         for word_index, (word, rank) in list(enumerate(ranked_words_by_rank)):
@@ -82,6 +84,37 @@ class GetHint:
             return random.choice(top_words)
         else:
             return random.choice(remaining_words)
+
+    def jordan(self, guess_words, guess_results, skip_calculation=False,pick_possible_factor= 1.1,start_word = None):
+
+        if start_word != None:
+            if self.av.guess_number == 0:
+                self.av.guess_number = self.av.guess_number +1
+                return start_word
+            
+        if not skip_calculation:
+            self.find_remaining_words(guess_words=guess_words, guess_results=guess_results)
+
+        sorted_words, sorted_values, available_answers =\
+                      calc_outcomes(rerun=False,verbose = True,
+                      number_of_results_to_display=10,
+                      known_wrong_positions_initial=self.av.known_wrong_positions,
+                      available_answers_initial=self.av.remaining_words,
+                      known_positions_initial=self.av.known_positions)
+
+        if sorted_words[0] in available_answers:
+            return sorted_words[0]
+        else:
+            for j in range(0,len(sorted_words)):
+                if sorted_words[j] in available_answers:
+                    break
+            print(sorted_values[j],sorted_values[0]*pick_possible_factor)
+            if sorted_values[j] < sorted_values[0]*pick_possible_factor:
+                print(sorted_words[j])
+                return sorted_words[j]
+            else:
+                print(sorted_words[0])
+                return sorted_words[0]                  
 
     def get_hint(self, guess_words, guess_results):
         if self.hint_type is None:

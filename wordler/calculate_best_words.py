@@ -4,7 +4,6 @@ from getpass import getuser
 from multiprocessing import Pool
 from narrow import calc_remaining_words, AvailableWords
 from read_words import write_calculated_results, all_answers, all_guesses, all_outcomes_list, read_calculated_results
-#import pdb
 
 
 # dev options
@@ -254,7 +253,7 @@ def calc(known_wrong_positions_initial=None, available_answers_initial=None, kno
 
 def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_results_to_display=25,
                   known_wrong_positions_initial=None, available_answers_initial=None,
-                  known_positions_initial=None):
+                  known_positions_initial=None, verbose = True):
     if available_answers_initial is None:
         available_answers_initial = deepcopy(all_answers)
     """
@@ -319,8 +318,10 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
         return available_answers_initial, [0], available_answers_initial #make return compatible
     else:
 
-        print("length of possible answers", len(available_answers_initial))
-        print(available_answers_initial)
+        if verbose:
+            print("length of possible answers", len(available_answers_initial))
+            if not (len(available_answers_initial) == len(all_answers)): #don't want to see it first time
+                print(available_answers_initial)
         if write_words:
             remaining_words_given_outcome_length = calculate_length_of_word_lists(remaining_words_given_outcome)
         else:
@@ -331,7 +332,6 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
             possible_outcomes_for_all_guesses = generate_possible_outcomes_for_all_guesses(all_guesses,known_positions_initial)
             sum_list_length = sum_all_lengths(remaining_words_given_outcome_length)
             check_sum(sum_list_length,available_answers_initial,remaining_words_given_outcome,possible_outcomes_for_all_guesses)
-        #pdb.set_trace()
         average_remaining_list_length = \
             calculate_average_remaining_list_length(remaining_words_given_outcome_length, len(available_answers_initial))
 
@@ -344,27 +344,28 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
             tuples = zip(*sorted_lists)
             sorted_values, sorted_words = [ list(tuple) for tuple in  tuples]
 
-
-        print(f'Top {number_of_results_to_display} Results: Possible answers in \033[1;30;42mgreen\033[0;0m')
-        print(" word | (likely length of narrowed list)")
-        answer_available = False
-        for word_index, (sorted_word, sorted_value) in list(enumerate(zip(sorted_words, sorted_values))):
-            if word_index == number_of_results_to_display:
-                break
-            if sorted_word in available_answers_initial:
-                print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % sorted_value})\033[0;0m')
-                answer_available = True
-            else:
-                print(f'{sorted_word} | ({"%.3f" % sorted_value})')
-
-
-        if not (answer_available):
-            print("...")
+        
+        if verbose:
+            print(f'Top {number_of_results_to_display} Results: Possible answers in \033[1;30;42mgreen\033[0;0m')
+            print(" word | (likely length of narrowed list)")
+            answer_available = False
             for word_index, (sorted_word, sorted_value) in list(enumerate(zip(sorted_words, sorted_values))):
-                if sorted_word in available_answers_initial: #{" %5d" % guess_index}
+                if word_index == number_of_results_to_display:
+                    break
+                if sorted_word in available_answers_initial:
                     print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % sorted_value})\033[0;0m')
                     answer_available = True
-                    break
+                else:
+                    print(f'{sorted_word} | ({"%.3f" % sorted_value})')
+
+
+            if not (answer_available):
+                print("...")
+                for word_index, (sorted_word, sorted_value) in list(enumerate(zip(sorted_words, sorted_values))):
+                    if sorted_word in available_answers_initial: #{" %5d" % guess_index}
+                        print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % sorted_value})\033[0;0m')
+                        answer_available = True
+                        break
         return sorted_words, sorted_values, available_answers_initial
 
     
@@ -385,7 +386,7 @@ def helper():
 if __name__ == '__main__':
     helper()
     #calc_outcomes(rerun=False, number_of_results_to_display=20)
-    #calc_outcomes(rerun = True)
+    #calc_outcomes(rerun = False,verbose = False)
     #calc_outcomes(['shape', 'drive'], ['22202', '00202'])
     #calc_outcomes(['roate', 'salon','macho'], ['01100', '02010','02202'])
     # logic is calc_outcomes->calc->generate_all_words_outcomes->per_word_outcomes_wrapper
