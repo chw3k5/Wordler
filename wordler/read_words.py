@@ -9,6 +9,8 @@ allowed_guesses_path = os.path.join(dir_name, 'allowed_guesses.csv')
 calculated_first_guesses_path = os.path.join(dir_name, 'calculated_first_guesses.csv')
 prefix, _ = calculated_first_guesses_path.rsplit('.', 1)
 calculated_first_guesses_path_pickle = prefix + '.pkl'
+calculated_first_guesses_path_words_pickle = prefix + '_words.pkl'
+
 
 
 
@@ -70,7 +72,7 @@ allowed_guesses = set(words_into_list(path=allowed_guesses_path)) | all_answers
 all_guesses = sorted(allowed_guesses)
 
 
-def write_calculated_results(remaining_words_given_outcome, guessed_list=None, as_csv=True):
+def write_calculated_results(remaining_words_given_outcome, guessed_list=None, as_csv=True,words =False):
     if as_csv:
         if guessed_list is None:
             guessed_list = all_guesses
@@ -91,10 +93,14 @@ def write_calculated_results(remaining_words_given_outcome, guessed_list=None, a
             for line in body_lines:
                 f.write(line)
     else:
-        with open(calculated_first_guesses_path_pickle, 'wb') as f:
-            pickle.dump(remaining_words_given_outcome, f)
+        if words:
+            with open(calculated_first_guesses_path_words_pickle, 'wb') as f:
+                pickle.dump(remaining_words_given_outcome, f)
+        else:
+            with open(calculated_first_guesses_path_pickle, 'wb') as f:
+                pickle.dump(remaining_words_given_outcome, f)
 
-def read_calculated_results(guessed_list=None, from_csv=True):
+def read_calculated_results(guessed_list=None, from_csv=True,words = False):
     if from_csv:
         with open(calculated_first_guesses_path, 'r') as f:
             header = f.readline()
@@ -118,8 +124,13 @@ def read_calculated_results(guessed_list=None, from_csv=True):
                 outcomes_this_word.append(outcomes_dict[outcome])
             remaining_words_given_outcome.append(outcomes_this_word)
     else:
-        with open(calculated_first_guesses_path_pickle, "rb") as open_file:
-            remaining_words_given_outcome = pickle.load(open_file)
+        if words:
+            with open(calculated_first_guesses_path_words_pickle, "rb") as open_file:
+                remaining_words_given_outcome = pickle.load(open_file)
+        else:
+            with open(calculated_first_guesses_path_pickle, "rb") as open_file:
+                remaining_words_given_outcome = pickle.load(open_file)
+        
     return remaining_words_given_outcome
 
 
