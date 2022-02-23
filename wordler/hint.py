@@ -5,17 +5,31 @@ from narrow import AvailableWords
 class GetHint:
     hint_types = ['caleb', 'natalie', 'jada']
 
-    def __init__(self, hint_type=None, hard_mode=False):
+    def __init__(self, hint_type=None, hard_mode=False, bot_mode=False):
+        # settings
         self.hard_mode = hard_mode
+        self.bot_mode = bot_mode
         if hint_type is None:
             self.hint_type = None
         else:
             self.hint_type = hint_type.strip().lower()
             if self.hint_type not in self.hint_types:
                 raise KeyError(f"'{self.hint_type}' is not one of hint types: {self.hint_types}")
-
+        # data that is initialized later
         self.av = None
         self.remaining_guesses = None
+        self.guess_words = None
+        self.guess_results = None
+        # data that is initialized now
+        if bot_mode:
+            if hint_type is None:
+                raise ValueError('hint_type cannot be None when bot_mode==True')
+            self.av = AvailableWords(verbose=False)
+            self.remaining_guesses = set(self.av.remaining_guesses)
+            self.guess_words = []
+            self.guess_results = []
+
+
 
     def find_remaining_words(self, guess_words, guess_results):
         self.av = AvailableWords(verbose=False)
