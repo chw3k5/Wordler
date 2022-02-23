@@ -114,6 +114,8 @@ class Wordle:
         except ValueError:
             # we need to disable hints when a word not from the all_answers set is used.
             self.allow_hint = False
+            if self.bot_mode:
+                raise ValueError(f'Words not in the all_answers list cannot be used when bot_mode=True')
         self.word = self.word.strip()
         if len(self.word) != 5:
             raise ValueError(f'The user input word must have a length equal to 5, revived {self.word}')
