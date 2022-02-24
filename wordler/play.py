@@ -92,7 +92,7 @@ class Wordle:
         self.gh = None
 
         # stats data, initialized only once
-        self.user_stats = UserStats(username=self.username, verbose=True)
+        self.user_stats = UserStats(username=self.username, hard_mode=self.hard_mode)
 
     def reset(self):
         self.number_of_guesses = 0

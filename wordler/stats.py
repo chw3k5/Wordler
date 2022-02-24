@@ -8,11 +8,14 @@ if not os.path.exists(stats_dir):
 
 
 class UserStats:
-    def __init__(self, username, verbose=False):
+    def __init__(self, username, hard_mode=False):
         # settings
         self.username = username
-        self.verbose = verbose
-        self.stats_file_path = os.path.join(stats_dir, f'{self.username}.psv')
+        self.hard_mode = hard_mode
+        if self.hard_mode:
+            self.stats_file_path = os.path.join(stats_dir, f'{self.username}_hard.psv')
+        else:
+            self.stats_file_path = os.path.join(stats_dir, f'{self.username}.psv')
 
         # data attributes
         self.results_per_word = None
