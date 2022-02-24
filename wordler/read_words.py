@@ -4,14 +4,12 @@ from random import shuffle
 
 
 dir_name = os.path.dirname(os.path.realpath(__file__))
-all_words_path = os.path.join(dir_name, 'all_words.csv')
-allowed_guesses_path = os.path.join(dir_name, 'allowed_guesses.csv')
-calculated_first_guesses_path = os.path.join(dir_name, 'calculated_first_guesses.csv')
+all_words_path = os.path.join(dir_name, 'data', 'all_words.csv')
+allowed_guesses_path = os.path.join(dir_name, 'data', 'allowed_guesses.csv')
+calculated_first_guesses_path = os.path.join(dir_name, 'data', 'calculated_first_guesses.csv')
 prefix, _ = calculated_first_guesses_path.rsplit('.', 1)
 calculated_first_guesses_path_pickle = prefix + '.pkl'
 calculated_first_guesses_path_words_pickle = prefix + '_words.pkl'
-
-
 
 
 def generate_all_results():
@@ -24,7 +22,7 @@ def generate_all_results():
                 for n in range(0, 3):
                     n_str = str(n)
                     for m in range(0, 3):
-                        yield  i_str + j_str + k_str + n_str + str(m)
+                        yield i_str + j_str + k_str + n_str + str(m)
 
 
 def words_into_list(path=all_words_path):
@@ -100,6 +98,7 @@ def write_calculated_results(remaining_words_given_outcome, guessed_list=None, a
             with open(calculated_first_guesses_path_pickle, 'wb') as f:
                 pickle.dump(remaining_words_given_outcome, f)
 
+
 def read_calculated_results(guessed_list=None, from_csv=True,words = False):
     if from_csv:
         with open(calculated_first_guesses_path, 'r') as f:
@@ -136,13 +135,3 @@ def read_calculated_results(guessed_list=None, from_csv=True,words = False):
 
 if __name__ == '__main__':
     look_up_by_letter, shuffled_word_list = words_into_by_letter_dict()
-
-
-
-
-
-
-
-
-
-

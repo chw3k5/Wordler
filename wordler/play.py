@@ -7,6 +7,7 @@ from string import ascii_lowercase
 from read_words import all_word_list, all_answers, allowed_guesses, all_guesses
 from narrow import allowed_true, clear_console, AvailableWords
 from hint import GetHint
+from stats import UserStats
 
 
 def get_punctuation(number_of_guesses):
@@ -58,8 +59,17 @@ class Wordle:
         self.first_word = first_word
         self.hard_mode = hard_mode
         self.allow_hint = allow_hint
-        self.hint_type = hint_type.strip().lower()
+        if hint_type is None:
+            self.hint_type = None
+        else:
+            self.hint_type = hint_type.strip().lower()
         self.bot_mode = bot_mode
+        if self.bot_mode:
+            if hint_type is None:
+                raise ValueError(f'hint_type cannot be None when bot_mode==True.')
+            self.username = self.hint_type[0].upper() + self.hint_type[1:]
+        else:
+            self.username = getuser()
         # data initialization
         self.available_words = copy(all_word_list)
         shuffle(self.available_words)
@@ -80,6 +90,9 @@ class Wordle:
         self.console_str = None
         self.av = None
         self.gh = None
+
+        # stats data, initialized only once
+        self.user_stats = UserStats(username=self.username, verbose=True)
 
     def reset(self):
         self.number_of_guesses = 0
@@ -103,22 +116,26 @@ class Wordle:
         self.games_number += 1
 
     def get_word(self, word=None):
+        remove_word = True
         if self.games_number == 1 and self.first_word is not None:
             self.word = self.first_word
         elif word is None:
             self.word = self.available_words.pop()
+            remove_word = False
         else:
             self.word = word
-        try:
-            self.available_words.remove(word)
-        except ValueError:
-            # we need to disable hints when a word not from the all_answers set is used.
-            self.allow_hint = False
-            if self.bot_mode:
-                raise ValueError(f'Words not in the all_answers list cannot be used when bot_mode=True')
         self.word = self.word.strip()
         if len(self.word) != 5:
             raise ValueError(f'The user input word must have a length equal to 5, revived {self.word}')
+        if remove_word:
+            try:
+                self.available_words.remove(word)
+            except ValueError:
+                # we need to disable hints when a word not from the all_answers set is used.
+                self.allow_hint = False
+                if self.bot_mode:
+                    raise ValueError(f'Words like "{self.word}" that are not in the all_answers list cannot be ' +
+                                     f'used when bot_mode=True')
         for letter in self.word:
             if letter not in self.letter_counter.keys():
                 self.letter_counter[letter] = 0
@@ -280,9 +297,10 @@ class Wordle:
         if self.bot_mode:
             print(self.console_str)
             print(self.display_history)
-            name_str = f'The bot, {self.hint_type[0].upper() + self.hint_type[1:]},'
+            name_str = f'The bot, {self.username},'
         else:
-            name_str = f'{getuser()}'
+            name_str = f'{self.username}'
+        self.user_stats.add_game(solution_word=self.word, guesses=self.guessed_words)
         print(f'\n\n{name_str} solved the puzzle in {self.number_of_guesses} guesses{punctuation}\n')
         print(self.share_text)
 
@@ -308,6 +326,7 @@ def play(qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True,
             play_again = True
         else:
             play_again = False
+    w.user_stats.write_stats()
 
 
 if __name__ == '__main__':
