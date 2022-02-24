@@ -131,6 +131,12 @@ def calculate_average_remaining_list_length(remaining_words_given_outcome, lengt
         average_remaining_list_length.append(sum_values / length_remaining_words)
     return average_remaining_list_length
 
+def calculate_max_remaining_list_length(remaining_words_given_outcome, length_remaining_words):
+    average_remaining_list_length = []
+    for outcomes_this_guess in remaining_words_given_outcome:
+        average_remaining_list_length.append(max(outcomes_this_guess))
+    return average_remaining_list_length
+
 def sum_all_lengths(remaining_words_given_outcome):
     sum_list_length = []
     for outcomes_this_guess in remaining_words_given_outcome:
@@ -257,7 +263,7 @@ def calc(known_wrong_positions_initial=None, available_answers_initial=None,
 
 def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_results_to_display=25,
                   known_wrong_positions_initial=None, available_answers_initial=None,
-                  known_positions_initial=None,available_guesses_initial = None, verbose = True):
+                  known_positions_initial=None,available_guesses_initial = None, verbose = True,mode = 'ave'):
     if available_answers_initial is None:
         available_answers_initial = deepcopy(all_answers)
     if available_guesses_initial is None:
@@ -336,8 +342,14 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
             possible_outcomes_for_all_guesses = generate_possible_outcomes_for_all_guesses(available_guesses_initial,known_positions_initial)
             sum_list_length = sum_all_lengths(remaining_words_given_outcome_length)
             check_sum(sum_list_length,available_answers_initial,remaining_words_given_outcome,possible_outcomes_for_all_guesses,available_guesses_initial)
-        average_remaining_list_length = \
+        if mode == 'ave' :
+            average_remaining_list_length =\
             calculate_average_remaining_list_length(remaining_words_given_outcome_length, len(available_answers_initial))
+        elif mode == 'minimax':
+            average_remaining_list_length =\
+            calculate_max_remaining_list_length(remaining_words_given_outcome_length, len(available_answers_initial))
+        else:
+            raise KeyError(f'mode: {mode}, not available.')
 
         if debug_mode:
             sorted_lists = sorted(zip(average_remaining_list_length, available_guesses_initial[0:1]))
@@ -351,7 +363,10 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
         
         if verbose:
             print(f'Top {number_of_results_to_display} Results: Possible answers in \033[1;30;42mgreen\033[0;0m')
-            print(" word | (likely length of narrowed list)")
+            if mode == 'ave':
+                print(" word | (likely length of narrowed list)")
+            else:
+                print(" word | (maximum length of narrowed list)")
             answer_available = False
             for word_index, (sorted_word, sorted_value) in list(enumerate(zip(sorted_words, sorted_values))):
                 if word_index == number_of_results_to_display:
@@ -371,9 +386,7 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
                         break
         return sorted_words, sorted_values, available_answers_initial
 
-    
-
-def helper():
+def helper(mode = 'ave'):
     av = AvailableWords()
     while len(av) > 1:
         print("length of all guesses is",len(all_guesses))
@@ -382,14 +395,13 @@ def helper():
                       known_wrong_positions_initial=av.known_wrong_positions,
                       available_answers_initial=av.remaining_words,
                       known_positions_initial=av.known_positions,
-                      available_guesses_initial=av.remaining_guesses)
+                      available_guesses_initial=av.all_guesses,mode = mode)
         av.ask_guess()
 
 
-
 if __name__ == '__main__':
-    helper()
-    #calc_outcomes(rerun=False, number_of_results_to_display=20)
+    helper(mode = 'ave')
+    #calc_outcomes(rerun=False, number_of_results_to_display=20,mode = 'ave')
     #calc_outcomes(rerun = False,verbose = False)
     #calc_outcomes(['shape', 'drive'], ['22202', '00202'])
     #calc_outcomes(['roate', 'salon','macho'], ['01100', '02010','02202'])
