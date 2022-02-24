@@ -85,17 +85,43 @@ class GetHint:
         else:
             return random.choice(remaining_words)
 
-    def jordan(self, guess_words, guess_results, skip_calculation=False,pick_possible_factor= 1.1,start_word = None):
+    def jordan(self, guess_words, guess_results, skip_calculation=False,
+                   pick_possible_factor= 1.1,start_word = None,bros = True,bros_number = 100):
 
-        if start_word != None:
-            if self.av.guess_number == 0:
-                self.av.guess_number = self.av.guess_number +1
-                return start_word
-            
         if not skip_calculation:
             self.find_remaining_words(guess_words=guess_words, guess_results=guess_results)
+     
+        print(len(self.av.remaining_words))
+        if start_word != None:
+            self.av.guess_number = self.av.guess_number +1
+            if self.av.guess_number == 0:
+                return start_word
+        else:
+            self.av.guess_number = self.av.guess_number +1
+            
+        if bros == True and self.av.guess_number != 1: #combine caleb and jordan (who are brothers)
+            print("bro mode")
+            top_words = []
+            ranked_guesses_by_rank = self.av.ranked_guesses_by_rank
+            for word_index, (word, rank) in list(enumerate(ranked_guesses_by_rank)):
+                top_words.append(word)
+                if len(top_words) == bros_number:
+                    break
+            #print(top_words)
+            check_guesses = top_words+self.av.remaining_words
+            #print(check_guesses)
+            
 
-        sorted_words, sorted_values, available_answers =\
+               
+            sorted_words, sorted_values, available_answers =\
+                      calc_outcomes(rerun=False,verbose = True,
+                      number_of_results_to_display=10,
+                      known_wrong_positions_initial=self.av.known_wrong_positions,
+                      available_answers_initial=self.av.remaining_words,
+                      known_positions_initial=self.av.known_positions,
+                      available_guesses_initial=check_guesses)
+        else:
+            sorted_words, sorted_values, available_answers =\
                       calc_outcomes(rerun=False,verbose = True,
                       number_of_results_to_display=10,
                       known_wrong_positions_initial=self.av.known_wrong_positions,
@@ -114,7 +140,8 @@ class GetHint:
                 return sorted_words[j]
             else:
                 print(sorted_words[0])
-                return sorted_words[0]                  
+                return sorted_words[0]
+
 
     def get_hint(self, guess_words, guess_results):
         if self.hint_type is None:

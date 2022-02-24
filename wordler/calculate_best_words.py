@@ -138,7 +138,7 @@ def sum_all_lengths(remaining_words_given_outcome):
         sum_list_length.append(sum_values)
     return sum_list_length
 
-def check_sum(sum_list_length,available_answers,remaining_words_given_outcome,all_possible_outcomes):
+def check_sum(sum_list_length,available_answers,remaining_words_given_outcome,all_possible_outcomes,all_guesses):
     check_length = len(available_answers)
     available_answers_list =list(available_answers)
     for i in range(0,len(sum_list_length)):
@@ -167,8 +167,6 @@ def generate_possible_outcomes_for_all_guesses(all_guesses,known_positions_initi
     possible_outcomes_for_all_guesses = []
     for i in range(0,len(all_guesses)):
         possible_outcomes_for_all_guesses.append(trim_outcomes(all_guesses[i],known_positions_initial))
-
-    #print(possible_outcomes_for_all_guesses)
         
     return possible_outcomes_for_all_guesses
     
@@ -186,17 +184,15 @@ def calculate_length_of_word_lists(remaining_words_given_outcome):
 
 
 def per_word_outcomes(guess_word, known_wrong_positions_initial=None,
-                      available_answers_initial=deepcopy(all_answers), known_positions_initial=None):
+                      available_answers_initial=deepcopy(all_answers),
+                      known_positions_initial=None):
     if known_wrong_positions_initial is None:
         known_wrong_positions_initial = {}
     if known_positions_initial is None:
         known_positions_initial = {}
 
-    #print(guess_word)
     possible_outcomes = trim_outcomes(guess_word,known_positions_initial)
-    #print(guess_word)
     for single_outcome in possible_outcomes:
-        #print(single_outcome)
         known_wrong_positions, known_positions_this_guess, required_letter_count_this_guess,\
           available_answers,known_not_used = \
             calc_remaining_words(known_wrong_positions=deepcopy(known_wrong_positions_initial),
@@ -220,45 +216,55 @@ def per_word_outcomes_wrapper(args):
 
 
 def generate_all_words_outcomes(known_wrong_positions_initial=None, available_answers_initial=None,
-                                known_positions_initial=None):
+                                known_positions_initial=None,available_guesses_initial = None):
     if available_answers_initial is None:
         available_answers_initial = deepcopy(all_answers)
+    if available_guesses_initial is None:
+        available_guesses_initial = deepcopy(all_guesses)
+
     if multiprocessing_threads is None:
         all_outcomes_list = []
-        for guess_index, guess_word in list(enumerate(all_guesses)):
+        for guess_index, guess_word in list(enumerate(available_guesses_initial)):
             this_word_outcomes = per_word_outcomes_wrapper(args=(guess_index, guess_word,known_wrong_positions_initial,
-                                                                 available_answers_initial,known_positions_initial))
+                                                                 available_answers_initial,known_positions_initial,
+                                                                 available_guesses_initial))
 
             all_outcomes_list.append(this_word_outcomes)
 
     else:
         all_args = [(guess_index, guess_word, known_wrong_positions_initial, available_answers_initial,
-                     known_positions_initial) for guess_index, guess_word in list(enumerate(all_guesses))]
+                     known_positions_initial) for guess_index, guess_word in list(enumerate(available_guesses_initial))]
         with Pool(multiprocessing_threads) as p:
             #all_outcomes_list = p.map(per_word_outcomes_wrapper, all_args)
             all_outcomes_list = list(p.imap(per_word_outcomes_wrapper, all_args))
     return all_outcomes_list
 
 
-def calc(known_wrong_positions_initial=None, available_answers_initial=None, known_positions_initial=None):
+def calc(known_wrong_positions_initial=None, available_answers_initial=None,
+             known_positions_initial=None,available_guesses_initial = None):
     if available_answers_initial is None:
         available_answers_initial = deepcopy(all_answers)
+    if available_guesses_initial is None:
+        available_guesses_initial = deepcopy(all_guesses)
     print("Calculating optimal words...")
     remaining_words_given_outcome = generate_all_words_outcomes(
                         known_wrong_positions_initial=known_wrong_positions_initial,
                             available_answers_initial=available_answers_initial,
-                                known_positions_initial=known_positions_initial)
+                                known_positions_initial=known_positions_initial,
+                                     available_guesses_initial = available_guesses_initial)
     return remaining_words_given_outcome
 
 
 def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_results_to_display=25,
                   known_wrong_positions_initial=None, available_answers_initial=None,
-                  known_positions_initial=None, verbose = True):
+                  known_positions_initial=None,available_guesses_initial = None, verbose = True):
     if available_answers_initial is None:
         available_answers_initial = deepcopy(all_answers)
+    if available_guesses_initial is None:
+        available_guesses_initial = deepcopy(all_guesses)
     """
-    There are 3**5 possible outcomes
-    it seems given every possible outcome every word is possible
+    There are 3**5 -5(GGGGY) - more for repeated letters possible outcomes
+    Given every possible outcome every word is possible
     want sum of length_of_list*liklyhood_of_getting_list =
            sum(length_of_list(all_outcomes)*(length_of_list(all_outcomes)/total_possible_words_available_for guess)
     should equal average list length
@@ -266,20 +272,19 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
     if guess_words == None: 
         if len(available_answers_initial) != len(all_answers): # detect if supplying rules instead of guesses and results
             if len(available_answers_initial) > 2:
-                #print("here 1",len(available_guesses))
                 remaining_words_given_outcome = calc(known_wrong_positions_initial=known_wrong_positions_initial,
                                                      available_answers_initial=available_answers_initial,
-                                                     known_positions_initial=known_positions_initial)
-                #print("here 2",len(available_guesses))
+                                                     known_positions_initial=known_positions_initial,
+                                                     available_guesses_initial = available_guesses_initial)
         else:
             if rerun: #first guesses are a bit slow and only change if word banks are updated
                 remaining_words_given_outcome = calc(known_wrong_positions_initial=known_wrong_positions_initial,
                                                      available_answers_initial=available_answers_initial,
-                                                     known_positions_initial = known_positions_initial)
+                                                     known_positions_initial = known_positions_initial,
+                                                     available_guesses_initial = available_guesses_initial)
+                
                 write_calculated_results(remaining_words_given_outcome=remaining_words_given_outcome,
                                          as_csv=write_csv_outcomes,words = write_words)
-                
-
             else:
                 remaining_words_given_outcome = read_calculated_results(from_csv=read_from_csv_outcomes,words = write_words)
     else:
@@ -287,10 +292,7 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
         known_wrong_positions_initial, known_positions_initial, required_letter_count_this_guess, \
           available_answers_initial, known_not_used = \
             calc_remaining_words(known_wrong_positions={}, available_answers=deepcopy(all_answers),guess_word=guess_words[0],
-                                 guess_results=guess_results[0], known_positions={})
-
-
-        available_answers_initial
+                                 guess_results=guess_results[0], known_positions={},available_guesses_initial = deepcopy(all_guesses))
 
         for i in range(1, len(guess_words)):
             known_wrong_positions_initial, known_positions_this_guess, required_letter_count_this_guess,\
@@ -299,14 +301,16 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
                                          available_answers=available_answers_initial,
                                          guess_word=guess_words[i],
                                          guess_results=guess_results[i],
-                                         known_positions=known_positions_initial)
+                                         known_positions=known_positions_initial,
+                                         available_guesses_initial = available_guesses_initial)
 
             known_positions_initial.update(known_positions_this_guess)
 
         if len(available_answers_initial) > 2:
             remaining_words_given_outcome = calc(known_wrong_positions_initial=known_wrong_positions_initial,
                                                      available_answers_initial=available_answers_initial,
-                                                     known_positions_initial=known_positions_initial)
+                                                     known_positions_initial=known_positions_initial,
+                                                     available_guesses_initial = available_guesses_initial)
 
     
 
@@ -329,18 +333,18 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
         # do check sum
         if do_checksum:
             print("Doing checksum")
-            possible_outcomes_for_all_guesses = generate_possible_outcomes_for_all_guesses(all_guesses,known_positions_initial)
+            possible_outcomes_for_all_guesses = generate_possible_outcomes_for_all_guesses(available_guesses_initial,known_positions_initial)
             sum_list_length = sum_all_lengths(remaining_words_given_outcome_length)
-            check_sum(sum_list_length,available_answers_initial,remaining_words_given_outcome,possible_outcomes_for_all_guesses)
+            check_sum(sum_list_length,available_answers_initial,remaining_words_given_outcome,possible_outcomes_for_all_guesses,available_guesses_initial)
         average_remaining_list_length = \
             calculate_average_remaining_list_length(remaining_words_given_outcome_length, len(available_answers_initial))
 
         if debug_mode:
-            sorted_lists = sorted(zip(average_remaining_list_length, all_guesses[0:1]))
+            sorted_lists = sorted(zip(average_remaining_list_length, available_guesses_initial[0:1]))
             tuples = zip(*sorted_lists)
             sorted_values, sorted_words = [ list(tuple) for tuple in  tuples]
         else:
-            sorted_lists = sorted(zip(average_remaining_list_length, all_guesses))
+            sorted_lists = sorted(zip(average_remaining_list_length, available_guesses_initial))
             tuples = zip(*sorted_lists)
             sorted_values, sorted_words = [ list(tuple) for tuple in  tuples]
 
@@ -357,7 +361,6 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
                     answer_available = True
                 else:
                     print(f'{sorted_word} | ({"%.3f" % sorted_value})')
-
 
             if not (answer_available):
                 print("...")
@@ -378,7 +381,8 @@ def helper():
                       number_of_results_to_display=first_guess_number_of_results_to_display,
                       known_wrong_positions_initial=av.known_wrong_positions,
                       available_answers_initial=av.remaining_words,
-                      known_positions_initial=av.known_positions)
+                      known_positions_initial=av.known_positions,
+                      available_guesses_initial=av.remaining_guesses)
         av.ask_guess()
 
 
