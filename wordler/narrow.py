@@ -8,6 +8,7 @@ from read_words import build_by_letter_dict, all_guesses, all_word_list
 allowed_letters = set(ascii_lowercase)
 allowed_true = {"true", 'y', 'yes', 'yeah', 't', 'yep', '1'}
 allowed_false = {"false", 'n', 'no', 'nope', 'f', '0'}
+allowed_stats = {'stats', 'stat', 'statistics', 's'}
 allow_result_answers = {'0', '1', '2'}
 
 

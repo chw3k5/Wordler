@@ -5,7 +5,7 @@ from random import shuffle
 from string import ascii_lowercase
 
 from read_words import all_word_list, all_answers, allowed_guesses, all_guesses
-from narrow import allowed_true, clear_console, AvailableWords
+from narrow import allowed_true, allowed_false, allowed_stats, clear_console, AvailableWords
 from hint import GetHint
 from stats import UserStats
 
@@ -70,10 +70,6 @@ class Wordle:
             self.username = self.hint_type[0].upper() + self.hint_type[1:]
         else:
             self.username = getuser()
-        # data initialization
-        self.available_words = copy(all_word_list)
-        shuffle(self.available_words)
-        self.games_number = 0
         # Data that is re-initialized between games
         self.remaining_guesses = None
         self.number_of_guesses = None
@@ -90,9 +86,17 @@ class Wordle:
         self.console_str = None
         self.av = None
         self.gh = None
-
         # stats data, initialized only once
         self.user_stats = UserStats(username=self.username, hard_mode=self.hard_mode)
+        self.prior_guesses = self.user_stats.get_prior_guesses()
+        # data initialization
+        self.games_number = 0
+        allowed_words_not_played = self.allowed_words - self.prior_guesses
+        if allowed_words_not_played:
+            self.available_words = list(allowed_words_not_played)
+        else:
+            self.available_words = copy(all_word_list)
+        shuffle(self.available_words)
 
     def reset(self):
         self.number_of_guesses = 0
@@ -320,12 +324,21 @@ def play(qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True,
         ess = 's'
         if w.games_number < 2:
             ess = ''
-        print(f'{w.games_number} game{ess} played, {len(w.available_words)} words remain.')
-        raw_play_again = input('\nDo you want to play again with a new word? [y,n]:\n ')
-        if raw_play_again.strip().lower() in allowed_true:
-            play_again = True
-        else:
-            play_again = False
+        play_again = None
+        while play_again is None:
+            print(f'\n  Statistics on {len(w.user_stats)} games')
+            print(f'  {w.games_number} game{ess} played this session')
+            print(f'  {len(w.available_words)} words remain')
+            print('\nDo you want to play again with a new word? [y,n]')
+            raw_play_again = input('            or see your statistics so far? [s]:\n ')
+            user_response = raw_play_again.strip().lower()
+
+            if user_response in allowed_true:
+                play_again = True
+            elif user_response in allowed_false:
+                play_again = False
+            elif user_response in allowed_stats:
+                w.user_stats.get_histogram_str(verbose=True)
     w.user_stats.write_stats()
 
 

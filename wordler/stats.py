@@ -8,7 +8,7 @@ if not os.path.exists(stats_dir):
 
 
 class UserStats:
-    max_hist_len = 20
+    max_hist_len = 30
 
     def __init__(self, username, hard_mode=False):
         # settings
@@ -25,6 +25,9 @@ class UserStats:
 
         # initialize the data
         self.read_stats()
+
+    def __len__(self):
+        return len(self.results_per_word)
 
     def read_stats(self):
         self.results_per_word = {}
@@ -67,7 +70,7 @@ class UserStats:
         self.results_per_word[solution_word] = {'guess_number': guess_number, 'guesses': guesses}
 
     def get_prior_guesses(self):
-        return [solution_word for solution_word in sorted(self.results_per_word.keys())]
+        return {solution_word for solution_word in sorted(self.results_per_word.keys())}
 
     def del_stats_file(self):
         os.remove(self.stats_file_path)
@@ -94,11 +97,20 @@ class UserStats:
         count_to_hist_space = float(floor_div + 1)
 
         # generate in-line histogram
-        hist_str = ''
-        for guess_number in sorted_guess_numbers:
-            len_this_guess = len(self.by_number_of_guesses[guess_number])
+        hard_mode_str = ''
+        if self.hard_mode:
+            hard_mode_str += ' in hard mode'
+
+        hist_str = f'\n{self.username}{hard_mode_str}:\n\n' + \
+                   f'{"attempts": >8} |{"histogram": <{self.max_hist_len}}  {"total": >5}\n' + \
+                   f'-----------------{"-" * self.max_hist_len}\n'
+        for guess_number in range(1, sorted_guess_numbers[-1] + 1):
+            if guess_number in self.by_number_of_guesses.keys():
+                len_this_guess = len(self.by_number_of_guesses[guess_number])
+            else:
+                len_this_guess = 0
             number_of_x = round(float(len_this_guess) / count_to_hist_space)
-            hist_str += f'{guess_number: >2} |{"x" * number_of_x: <{self.max_hist_len}}  {len_this_guess: >5}\n'
+            hist_str += f'{guess_number: >8} |{"x" * number_of_x: <{self.max_hist_len}}  {len_this_guess: >5}\n'
 
         # return/display results
         if verbose:
@@ -107,5 +119,5 @@ class UserStats:
 
 
 if __name__ == '__main__':
-    us = UserStats(username='Natalie', hard_mode=False)
+    us = UserStats(username='Natalie', hard_mode=True)
     us.get_histogram_str(verbose=True)
