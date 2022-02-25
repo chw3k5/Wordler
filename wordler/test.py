@@ -6,6 +6,7 @@ def bot_run(bot_name, hard_mode=False):
     w = Wordle(hard_mode=hard_mode, hint_type=bot_name, bot_mode=True)
     while w.available_words:
         w.play()
+    w.user_stats.write_stats()
 
 
 def run_all_bots(hard_mode=False):
