@@ -22,6 +22,7 @@ class UserStats:
         # data attributes
         self.results_per_word = None
         self.by_number_of_guesses = None
+        self.average_number_of_guesses = None
 
         # initialize the data
         self.read_stats()
@@ -78,11 +79,14 @@ class UserStats:
         
     def calc(self):
         self.by_number_of_guesses = {}
+        guess_number_sum = 0
         for solution_word in sorted(self.results_per_word.keys()):
             guess_number = self.results_per_word[solution_word]['guess_number']
+            guess_number_sum += guess_number
             if guess_number not in self.by_number_of_guesses:
                 self.by_number_of_guesses[guess_number] = set()
             self.by_number_of_guesses[guess_number].add(solution_word)
+        self.average_number_of_guesses = float(guess_number_sum) / len(self.results_per_word)
 
     def get_histogram_str(self, verbose=False):
         # do calculations
@@ -100,8 +104,8 @@ class UserStats:
         hard_mode_str = ''
         if self.hard_mode:
             hard_mode_str += ' in hard mode'
-
-        hist_str = f'\n{self.username}{hard_mode_str}:\n\n' + \
+        hist_str = f'\n{self.username}{hard_mode_str}:\n' + \
+                   f'   average number of guesses {"%1.3f" % self.average_number_of_guesses}\n\n' + \
                    f'{"attempts": >8} |{"histogram": <{self.max_hist_len}}  {"total": >5}\n' + \
                    f'-----------------{"-" * self.max_hist_len}\n'
         for guess_number in range(1, sorted_guess_numbers[-1] + 1):
@@ -119,5 +123,5 @@ class UserStats:
 
 
 if __name__ == '__main__':
-    us = UserStats(username='Natalie', hard_mode=True)
+    us = UserStats(username='Jordan', hard_mode=False)
     us.get_histogram_str(verbose=True)
