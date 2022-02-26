@@ -97,7 +97,7 @@ class Wordle:
         self.word = None
         self.console_str = None
         self.av = None
-        if self.bot_mode:  # initalize once don't reset
+        if self.bot_mode:  # initialize once don't reset
             self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True)
         else:
             self.gh = None
@@ -112,6 +112,12 @@ class Wordle:
         else:
             self.available_words = copy(all_word_list)
         shuffle(self.available_words)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.user_stats.write_stats()
 
     def reset(self):
         self.number_of_guesses = 0
@@ -290,6 +296,7 @@ class Wordle:
         # update the allowed guesses
         if self.hard_mode or self.bot_mode:
             self.av.add_guess(guess_word=guess_word, guess_results=guess_results)
+        if self.hard_mode:
             self.remaining_guesses = set(self.av.remaining_guesses)
         else:
             self.remaining_guesses.remove(guess_word)
@@ -334,30 +341,28 @@ def play(console_type='qwerty', first_word=None, hard_mode=False, allow_hint=Tru
     clear_console()
     if bot_mode and hint_type is None:
         hint_type = random.choice(GetHint.hint_types)
-    w = Wordle(console_type=console_type, first_word=first_word, hard_mode=hard_mode, allow_hint=allow_hint,
-               hint_type=hint_type, bot_mode=bot_mode)
-    play_again = True
-    while play_again:
-        w.play()
-        ess = 's'
-        if w.games_number < 2:
-            ess = ''
-        play_again = None
-        while play_again is None:
-            print(f'\n  Statistics on {len(w.user_stats)} games')
-            print(f'  {w.games_number} game{ess} played this session')
-            print(f'  {len(w.available_words)} words remain')
-            print('\nDo you want to play again with a new word? [y,n]')
-            raw_play_again = input('            or see your statistics so far? [s]:\n ')
-            user_response = raw_play_again.strip().lower()
-
-            if user_response in allowed_true:
-                play_again = True
-            elif user_response in allowed_false:
-                play_again = False
-            elif user_response in allowed_stats:
-                w.user_stats.get_histogram_str(verbose=True)
-    w.user_stats.write_stats()
+    with Wordle(console_type=console_type, first_word=first_word, hard_mode=hard_mode, allow_hint=allow_hint,
+                hint_type=hint_type, bot_mode=bot_mode) as w:
+        play_again = True
+        while play_again:
+            w.play()
+            ess = 's'
+            if w.games_number < 2:
+                ess = ''
+            play_again = None
+            while play_again is None:
+                print(f'\n  Statistics on {len(w.user_stats)} games')
+                print(f'  {w.games_number} game{ess} played this session')
+                print(f'  {len(w.available_words)} words remain')
+                print('\nDo you want to play again with a new word? [y,n]')
+                raw_play_again = input('            or see your statistics so far? [s]:\n ')
+                user_response = raw_play_again.strip().lower()
+                if user_response in allowed_true:
+                    play_again = True
+                elif user_response in allowed_false:
+                    play_again = False
+                elif user_response in allowed_stats:
+                    w.user_stats.get_histogram_str(verbose=True)
 
 
 if __name__ == '__main__':
