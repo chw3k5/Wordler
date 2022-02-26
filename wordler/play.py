@@ -85,7 +85,10 @@ class Wordle:
         self.word = None
         self.console_str = None
         self.av = None
-        self.gh = None
+        if self.bot_mode: #initalize once don't reset
+            self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True)
+        else:
+            self.gh = None
         # stats data, initialized only once
         self.user_stats = UserStats(username=self.username, hard_mode=self.hard_mode)
         self.prior_guesses = self.user_stats.get_prior_guesses()
@@ -107,7 +110,7 @@ class Wordle:
         if self.hard_mode or self.bot_mode:
             self.av = AvailableWords(verbose=False)
         if self.bot_mode:
-            self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True)
+            #self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True)
             self.gh.av = self.av
         self.remaining_guesses = copy(self.allowed_guesses)
 
@@ -309,7 +312,7 @@ class Wordle:
         print(self.share_text)
 
     def bot_turn(self):
-        return self.gh.__getattribute__(self.hint_type)(guess_words=None, guess_results=None, skip_calculation=True)
+        return self.gh.__getattribute__(self.hint_type)(guess_words=self.guessed_words, guess_results=self.guessed_results, skip_calculation=True)
 
 
 def play(qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True, hint_type=None, bot_mode=False):
