@@ -57,12 +57,13 @@ class Wordle:
                    ['r', 's', 't', 'v', 'w', 'x', 'z']]
 
     def __init__(self, console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None,
-                 bot_mode=False):
+                 bot_mode=False, companions=None):
         # settings
         self.console_type = console_type
         self.first_word = first_word
         self.hard_mode = hard_mode
         self.allow_hint = allow_hint
+
         if hint_type is None:
             self.hint_type = None
         else:
@@ -74,6 +75,13 @@ class Wordle:
             self.username = self.hint_type[0].upper() + self.hint_type[1:]
         else:
             self.username = getuser()
+        if companions is None:
+            self.companions = None
+        else:
+            self.companions = []
+            for companion_name in companions:
+                self.companions.append(Wordle(console_type=self.console_type, first_word=self.first_word,
+                                              hard_mode=self.hard_mode, hint_type=companion_name, bot_mode=True))
         # Data that is re-initialized between games
         self.remaining_guesses = None
         self.number_of_guesses = None
