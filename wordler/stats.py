@@ -1,4 +1,5 @@
 import os
+import math
 
 
 dir_name_this_file = os.path.dirname(os.path.realpath(__file__))
@@ -90,6 +91,7 @@ class UserStats:
 
     def get_histogram_str(self, verbose=False):
         # do calculations
+        uni_squares_suffixes = ['\u258F','\u258E','\u258D','\u258C','\u258B','\u258A','\u2589','\u2588']
         self.calc()
         max_len = -1
         sorted_guess_numbers = sorted(self.by_number_of_guesses.keys())
@@ -113,8 +115,15 @@ class UserStats:
                 len_this_guess = len(self.by_number_of_guesses[guess_number])
             else:
                 len_this_guess = 0
-            number_of_x = round(float(len_this_guess) / count_to_hist_space)
-            hist_str += f'{guess_number: >8} |{"x" * number_of_x: <{self.max_hist_len}}  {len_this_guess: >5}\n'
+            number_of_x = math.floor(float(len_this_guess) / count_to_hist_space)
+            remainder = round((float(len_this_guess)-number_of_x*count_to_hist_space)/count_to_hist_space*8)
+            hist_str += f'{guess_number: >8} |'
+            for i in range(0,number_of_x):
+                hist_str += "\u2588"
+            hist_str += uni_squares_suffixes[remainder]
+            for i in range(0,self.max_hist_len-number_of_x):
+                hist_str += " "
+            hist_str += f' {len_this_guess: >5}\n'
 
         # return/display results
         if verbose:
