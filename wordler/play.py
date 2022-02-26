@@ -26,15 +26,15 @@ def get_punctuation(number_of_guesses):
 
 
 def is_correct_place_letter_text(letter):
-    return f'\033[1;30;42m {letter.upper()} \033[0;0m'
+    return f"\033[1;30;42m {letter.upper()} \033[0;0m"
 
 
 def is_used_but_place_is_wrong_text(letter):
-    return f'\033[1;30;43m {letter.upper()} \033[0;0m'
+    return f"\033[1;30;43m {letter.upper()} \033[0;0m"
 
 
 def is_not_used_letter_text(letter):
-    return f'\033[1;37;40m {letter.upper()} \033[0;0m'
+    return f"\033[1;37;40m {letter.upper()} \033[0;0m"
 
 
 def is_unknown_test(letter):
@@ -51,11 +51,15 @@ class Wordle:
                     ['z', 'x', 'c', 'v', 'b', 'n', 'm']]
     abc_order = [['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm'],
                  ['n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']]
+    vowel_order = [['a', 'e', 'i', 'o', 'u', 'y'],
+                   ['b', 'c', 'd', 'f', 'g', 'h', 'j'],
+                   ['k', 'l', 'm', 'n', 'p', 'q'],
+                   ['r', 's', 't', 'v', 'w', 'x', 'z']]
 
-    def __init__(self, qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True, hint_type=None,
+    def __init__(self, console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None,
                  bot_mode=False):
         # settings
-        self.qwerty_console = qwerty_console
+        self.console_type = console_type
         self.first_word = first_word
         self.hard_mode = hard_mode
         self.allow_hint = allow_hint
@@ -85,7 +89,7 @@ class Wordle:
         self.word = None
         self.console_str = None
         self.av = None
-        if self.bot_mode: #initalize once don't reset
+        if self.bot_mode:  # initalize once don't reset
             self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True)
         else:
             self.gh = None
@@ -110,7 +114,7 @@ class Wordle:
         if self.hard_mode or self.bot_mode:
             self.av = AvailableWords(verbose=False)
         if self.bot_mode:
-            #self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True)
+            # self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True)
             self.gh.av = self.av
         self.remaining_guesses = copy(self.allowed_guesses)
 
@@ -163,7 +167,7 @@ class Wordle:
                 hint_str = f' (type "hint" to get a hint word from {hint_type[0].upper() + hint_type[1:]})'
             else:
                 hint_str = ''
-                hint_type=None
+                hint_type = None
             raw_word = input(f"{mode_str}\nEnter guess number: {self.number_of_guesses}{hint_str}\n ")
             test_word = raw_word.strip().lower()
             if self.allow_hint and test_word == 'hint':
@@ -200,10 +204,12 @@ class Wordle:
             raise KeyError
 
     def get_console_text(self):
-        if self.qwerty_console:
-            letter_order = self.qwerty_order
-        else:
+        if self.console_type == 'abc':
             letter_order = self.abc_order
+        elif self.console_type == 'vowel':
+            letter_order = self.vowel_order
+        else:
+            letter_order = self.qwerty_order
         console_str = '\n'
         for row_index, letter_row in list(enumerate(letter_order)):
             console_str += ' ' * row_index
@@ -312,14 +318,15 @@ class Wordle:
         print(self.share_text)
 
     def bot_turn(self):
-        return self.gh.__getattribute__(self.hint_type)(guess_words=self.guessed_words, guess_results=self.guessed_results, skip_calculation=True)
+        return self.gh.__getattribute__(self.hint_type)(guess_words=self.guessed_words,
+                                                        guess_results=self.guessed_results, skip_calculation=True)
 
 
-def play(qwerty_console=True, first_word=None, hard_mode=False, allow_hint=True, hint_type=None, bot_mode=False):
+def play(console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None, bot_mode=False):
     clear_console()
     if bot_mode and hint_type is None:
         hint_type = random.choice(GetHint.hint_types)
-    w = Wordle(qwerty_console=qwerty_console, first_word=first_word, hard_mode=hard_mode, allow_hint=allow_hint,
+    w = Wordle(console_type=console_type, first_word=first_word, hard_mode=hard_mode, allow_hint=allow_hint,
                hint_type=hint_type, bot_mode=bot_mode)
     play_again = True
     while play_again:
@@ -356,6 +363,7 @@ if __name__ == '__main__':
             concat_str = ', '
         hint_types_str += f'{hint_type[0].upper() + hint_type[1:]}{concat_str}'
     import argparse
+
     # set up the parser for this Script
     parser = argparse.ArgumentParser(description='Parser for play.py, a Wordle Emulator.')
     parser.add_argument('word', type=str, default=None, nargs='?',
@@ -366,6 +374,12 @@ if __name__ == '__main__':
                              "The default is --no-abc which displays a qwerty letter console.")
     parser.add_argument('--no-abc', dest='abc', action='store_false', default=True,
                         help="Turns off an 'ABCDEF...' letter console for and uses the default qwerty console " +
+                             "for keeping track of used letters. ")
+    parser.add_argument('--vowel', dest='vowel', action='store_true',
+                        help="Turns on an 'AEIOUYBCDF...' letter console for keeping track of used letters. " +
+                             "The default is --no-vowel which displays a qwerty letter console.")
+    parser.add_argument('--no-vowel', dest='vowel', action='store_false', default=True,
+                        help="Turns off an 'AEIOUYBCDF...' letter console for and uses the default qwerty console " +
                              "for keeping track of used letters. ")
     parser.add_argument('--hard', dest='hard', action='store_true',
                         help="Turns on Wordle Hard-mode. Hard mode restricts the allowed guessed to solve the puzzle." +
@@ -412,6 +426,12 @@ if __name__ == '__main__':
         hint_name = None
     else:
         hint_name = args.hint_type[0]
+    if args.abc:
+        console_type = 'abc'
+    elif args.vowel:
+        console_type = 'vowel'
+    else:
+        console_type = 'qwerty'
     # run the game script
-    play(qwerty_console=not args.abc, first_word=args.word, hard_mode=args.hard, allow_hint=args.hint,
+    play(console_type=console_type, first_word=args.word, hard_mode=args.hard, allow_hint=args.hint,
          hint_type=hint_name, bot_mode=args.bot_mode)
