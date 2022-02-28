@@ -136,10 +136,10 @@ class GetHint:
                 self.add_decision_memory(sorted_word, guess_words, guess_results)
                 return sorted_word
             elif sorted_value*pick_possible_factor > sorted_values[0] and mode == 'fastest':
-                self.add_decision_memory(sorted_words, guess_words, guess_results)
+                self.add_decision_memory(sorted_word, guess_words, guess_results)
                 return sorted_word
             elif len(guess_words) > 0 and mode == 'fastest': # always try to get right after first guess
-                self.add_decision_memory(sorted_words, guess_words, guess_results)
+                self.add_decision_memory(sorted_word, guess_words, guess_results)
                 return sorted_word
             else:
                 self.add_decision_memory(sorted_words[0], guess_words, guess_results)
