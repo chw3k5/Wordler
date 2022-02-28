@@ -21,7 +21,7 @@ class GetHint:
         self.remaining_guesses = None
         self.guess_words = None
         self.guess_results = None
-        self.decision_tree = {}  # for jordan's bot to not have to recalculate
+        self.decision_memory = {}  # for jordan's bot to not have to recalculate
         # data that is initialized now
         if bot_mode:
             if hint_type is None:
@@ -84,10 +84,10 @@ class GetHint:
         else:
             return random.choice(remaining_words)
 
-    def jordan(self, guess_words, guess_results, skip_calculation=False,
+    def jordan(self, guess_words, guess_results, skip_calculation=False,mode = 'all',
                pick_possible_factor=1.1, start_word=None, bros=False, bros_number=100):
 
-        previous_decision = self.check_decision_tree(guess_words, guess_results)
+        previous_decision = self.check_decision_memory(guess_words, guess_results)
         if previous_decision != None:
             print("Already decided")
             return previous_decision
@@ -95,14 +95,12 @@ class GetHint:
         if not skip_calculation:
             self.find_remaining_words(guess_words=guess_words, guess_results=guess_results)
 
-        print(len(self.av.remaining_words))
         if start_word is not None:
             if len(guess_words) < 1:
-                self.add_decision_tree(start_word, guess_words, guess_results)
+                self.add_decision_memory(start_word, guess_words, guess_results)
                 return start_word
 
         if bros:  # combine caleb and jordan (who are brothers)
-            print("bro mode")
             top_words = []
             ranked_guesses_by_rank = self.av.ranked_guesses_by_rank
             for word_index, (word, rank) in list(enumerate(ranked_guesses_by_rank)):
@@ -117,34 +115,31 @@ class GetHint:
                               known_wrong_positions_initial=self.av.known_wrong_positions,
                               available_answers_initial=self.av.remaining_words,
                               known_positions_initial=self.av.known_positions,
-                              available_guesses_initial=check_guesses)
+                              available_guesses_initial=check_guesses,mode = mode)
         else:
             sorted_words, sorted_values, available_answers = \
                 calc_outcomes(rerun=False, verbose=True,
                               number_of_results_to_display=10,
                               known_wrong_positions_initial=self.av.known_wrong_positions,
                               available_answers_initial=self.av.remaining_words,
-                              known_positions_initial=self.av.known_positions)
+                              known_positions_initial=self.av.known_positions,mode = mode)
 
         if sorted_words[0] in available_answers:
-            self.add_decision_tree(sorted_words[0], guess_words, guess_results)
+            self.add_decision_memory(sorted_words[0], guess_words, guess_results)
             return sorted_words[0]
         else:
             sorted_word, sorted_value = None, None
             for sorted_word, sorted_value in zip(sorted_words, sorted_values):
                 if sorted_word in available_answers:
                     break
-            print(sorted_value, sorted_values[0] * pick_possible_factor)
             if sorted_value < sorted_values[0] * pick_possible_factor:
-                self.add_decision_tree(sorted_word, guess_words, guess_results)
-                print(sorted_word)
+                self.add_decision_memory(sorted_word, guess_words, guess_results)
                 return sorted_word
             else:
-                print(sorted_words[0])
-                self.add_decision_tree(sorted_words[0], guess_words, guess_results)
+                self.add_decision_memory(sorted_words[0], guess_words, guess_results)
                 return sorted_words[0]
 
-    def add_decision_tree(self, picked_word, guess_words, guess_results):
+    def add_decision_memory(self, picked_word, guess_words, guess_results):
         # dictionary of past decisiosn
         if len(guess_results) > 0:
             key_list = []
@@ -153,10 +148,10 @@ class GetHint:
                 key_list.append(guess_results[i])
             key_tuple = tuple(key_list)
 
-            if not key_tuple in self.decision_tree.keys():
-                self.decision_tree[key_tuple] = picked_word
+            if not key_tuple in self.decision_memory.keys():
+                self.decision_memory[key_tuple] = picked_word
 
-    def check_decision_tree(self, guess_words, guess_results):
+    def check_decision_memory(self, guess_words, guess_results):
         if len(guess_results) > 0:
             key_list = []
             for i in range(0, len(guess_results)):
@@ -164,8 +159,8 @@ class GetHint:
                 key_list.append(guess_results[i])
             key_tuple = tuple(key_list)
 
-            if key_tuple in self.decision_tree.keys():
-                return self.decision_tree[key_tuple]
+            if key_tuple in self.decision_memory.keys():
+                return self.decision_memory[key_tuple]
             else:
                 return None
 
