@@ -64,6 +64,11 @@ def words_into_by_letter_dict(path=all_words_path):
 
 
 all_outcomes_list = list(generate_all_results())
+all_outcomes_list.remove('12222') # These outcomes are impossible
+all_outcomes_list.remove('21222')
+all_outcomes_list.remove('22122')
+all_outcomes_list.remove('22212')
+all_outcomes_list.remove('22221')
 all_word_list = words_into_list()
 all_answers = set(all_word_list)
 allowed_guesses = set(words_into_list(path=allowed_guesses_path)) | all_answers
