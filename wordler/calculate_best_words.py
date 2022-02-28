@@ -8,7 +8,6 @@ from read_words import write_calculated_results, all_answers, all_guesses, all_o
 
 # dev options
 do_calculated_first_guesses_rerun = False
-first_guess_number_of_results_to_display = 25
 write_csv_outcomes = False
 read_from_csv_outcomes = False
 do_checksum = True 
@@ -30,7 +29,7 @@ current_user = getuser()
 if debug_mode:
     # this will do standard linear processing.
     multiprocessing_threads = None
-    all_guesses = all_guesses[:1]
+    all_guesses = all_guesses[:100]
     #all_guesses[0] = 'raise'
 elif current_user == "chw3k5":
     multiprocessing_threads = balanced_threads  # Caleb's other computers
@@ -77,7 +76,6 @@ def trim_outcomes(word,known_positions_initial):
                 possible_outcomes.remove(impossible_outcome)
                     
                 #__01_ or _0_1_
-                #print("removeing",impossible_outcome)
                 outcomes_to_remove = []
                 for outcome in possible_outcomes: 
                     if (outcome[indexes[0]] == '0' and outcome[indexes[1]] == '1'): 
@@ -95,7 +93,6 @@ def trim_outcomes(word,known_positions_initial):
                         if (outcome[indexes[0]] == '0' and outcome[indexes[1]] == '2' and outcome[indexes[2]] == '1'):#weete #_02_1
                             outcomes_to_remove.append(outcome)
                 for outcome in outcomes_to_remove:
-                    #print("removing",outcome)
                     possible_outcomes.remove(outcome)
            
                 outcomes_to_remove = [] #if doubles are 1s cant have more than one 2
@@ -118,8 +115,7 @@ def trim_outcomes(word,known_positions_initial):
             for outcome in outcomes_to_remove:
                 possible_outcomes.remove(outcome)
 
-        
-            
+    # there might be more impossible outcomes and trimming them might save me time
      
     return possible_outcomes
 
@@ -136,6 +132,17 @@ def calculate_max_remaining_list_length(remaining_words_given_outcome, length_re
     for outcomes_this_guess in remaining_words_given_outcome:
         average_remaining_list_length.append(max(outcomes_this_guess))
     return average_remaining_list_length
+
+def calculate_best_chance_after_one_guess(remaining_words_given_outcome, length_remaining_words):
+    metric = []
+    for outcomes_this_guess in remaining_words_given_outcome:
+        values = []
+        for outcome in outcomes_this_guess:
+            if outcome !=0:
+                values.append(1./outcome)
+        sum_values = float(sum(values))
+        metric.append(sum_values / length_remaining_words)
+    return metric
 
 def sum_all_lengths(remaining_words_given_outcome):
     sum_list_length = []
@@ -166,7 +173,7 @@ def check_sum(sum_list_length,available_answers,remaining_words_given_outcome,al
                         break #just show first one
                             
         elif sum_list_length[i]<check_length:
-            pritn("to restrictive rules/not all possilbe outcomes considered for i = ",i,all_guesses[i])
+            print("to restrictive rules/not all possilbe outcomes considered for i = ",i,all_guesses[i])
 
 
 def generate_possible_outcomes_for_all_guesses(all_guesses,known_positions_initial = None):
@@ -175,8 +182,6 @@ def generate_possible_outcomes_for_all_guesses(all_guesses,known_positions_initi
         possible_outcomes_for_all_guesses.append(trim_outcomes(all_guesses[i],known_positions_initial))
         
     return possible_outcomes_for_all_guesses
-    
-
 
 def calculate_length_of_word_lists(remaining_words_given_outcome):
     list_of_list_of_lengths =[] 
@@ -187,8 +192,6 @@ def calculate_length_of_word_lists(remaining_words_given_outcome):
         list_of_list_of_lengths.append(this_word_list)
     return list_of_list_of_lengths
        
-
-
 def per_word_outcomes(guess_word, known_wrong_positions_initial=None,
                       available_answers_initial=deepcopy(all_answers),
                       known_positions_initial=None):
@@ -211,15 +214,14 @@ def per_word_outcomes(guess_word, known_wrong_positions_initial=None,
             yield len(available_answers)
 
 def per_word_outcomes_wrapper(args):
-    guess_index, guess_word, known_wrong_positions_initial, available_answers_initial,known_positions_initial = args
+    guess_index, guess_word, known_wrong_positions_initial, available_answers_initial, known_positions_initial,len_available_guesses_initial = args
     this_word_outcomes = \
       list(per_word_outcomes(guess_word=guess_word, known_wrong_positions_initial=known_wrong_positions_initial,
                              available_answers_initial=available_answers_initial,
                              known_positions_initial=known_positions_initial))
-    print(f'{" %3d" % (100*guess_index/len(all_guesses))}% complete', end='\r')
-    #print(guess_word)
+    print(f'{" %3d" % (100*guess_index/len_available_guesses_initial)}% complete'+\
+              f'{" (%5d" % (guess_index)}/{"%5d" % (len_available_guesses_initial)})', end='\r')
     return this_word_outcomes
-
 
 def generate_all_words_outcomes(known_wrong_positions_initial=None, available_answers_initial=None,
                                 known_positions_initial=None,available_guesses_initial = None):
@@ -233,13 +235,13 @@ def generate_all_words_outcomes(known_wrong_positions_initial=None, available_an
         for guess_index, guess_word in list(enumerate(available_guesses_initial)):
             this_word_outcomes = per_word_outcomes_wrapper(args=(guess_index, guess_word,known_wrong_positions_initial,
                                                                  available_answers_initial,known_positions_initial,
-                                                                 available_guesses_initial))
+                                                                 len(available_guesses_initial)))
 
             all_outcomes_list.append(this_word_outcomes)
 
     else:
         all_args = [(guess_index, guess_word, known_wrong_positions_initial, available_answers_initial,
-                     known_positions_initial) for guess_index, guess_word in list(enumerate(available_guesses_initial))]
+                     known_positions_initial,len(available_guesses_initial)) for guess_index, guess_word in list(enumerate(available_guesses_initial))]
         with Pool(multiprocessing_threads) as p:
             #all_outcomes_list = p.map(per_word_outcomes_wrapper, all_args)
             all_outcomes_list = list(p.imap(per_word_outcomes_wrapper, all_args))
@@ -318,18 +320,17 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
                                                      known_positions_initial=known_positions_initial,
                                                      available_guesses_initial = available_guesses_initial)
 
-    
-
     if len(available_answers_initial) == 2:
-        print("Only two answers left pick one of :",available_answers_initial)
+        print("Only two answers left pick one of:")
+        print(available_answers_initial[0],available_answers_initial[1])
         return available_answers_initial, [1,1], available_answers_initial #make return compatible
     elif len(available_answers_initial) == 1:
-        print("Only answer remaining is  ", available_answers_initial)
+        print("The only answer remaining is")
+        print(available_answers_initial[0])
         return available_answers_initial, [0], available_answers_initial #make return compatible
     else:
-
         if verbose:
-            print("length of possible answers", len(available_answers_initial))
+            #print("length of possible answers", len(available_answers_initial))
             if not (len(available_answers_initial) == len(all_answers)): #don't want to see it first time
                 print(available_answers_initial)
         if write_words:
@@ -339,68 +340,128 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
         # do check sum
         if do_checksum:
             print("Doing checksum")
-            possible_outcomes_for_all_guesses = generate_possible_outcomes_for_all_guesses(available_guesses_initial,known_positions_initial)
+            possible_outcomes_for_all_guesses = \
+              generate_possible_outcomes_for_all_guesses(available_guesses_initial,known_positions_initial)
             sum_list_length = sum_all_lengths(remaining_words_given_outcome_length)
-            check_sum(sum_list_length,available_answers_initial,remaining_words_given_outcome,possible_outcomes_for_all_guesses,available_guesses_initial)
+            check_sum(sum_list_length,available_answers_initial,remaining_words_given_outcome,
+                          possible_outcomes_for_all_guesses,available_guesses_initial)
+        reversed = False
         if mode == 'ave' :
-            average_remaining_list_length =\
-            calculate_average_remaining_list_length(remaining_words_given_outcome_length, len(available_answers_initial))
+            metric = calculate_average_remaining_list_length(remaining_words_given_outcome_length,
+                                                                 len(available_answers_initial))
         elif mode == 'minimax':
-            average_remaining_list_length =\
-            calculate_max_remaining_list_length(remaining_words_given_outcome_length, len(available_answers_initial))
+            metric = calculate_max_remaining_list_length(remaining_words_given_outcome_length,
+                                                             len(available_answers_initial))
+        elif mode == 'fastest':
+            metric = calculate_best_chance_after_one_guess(remaining_words_given_outcome_length,
+                                                               len(available_answers_initial))
+            reversed = True
+        elif mode == 'all': # average but diplay others as well
+            metric = calculate_average_remaining_list_length(remaining_words_given_outcome_length,
+                                                                 len(available_answers_initial))
+            metric2 = calculate_max_remaining_list_length(remaining_words_given_outcome_length,
+                                                               len(available_answers_initial))
+            metric3 = calculate_best_chance_after_one_guess(remaining_words_given_outcome_length,
+                                                               len(available_answers_initial))
+            metric = zip(metric, metric2, metric3)
+            
         else:
             raise KeyError(f'mode: {mode}, not available.')
 
         if debug_mode:
-            sorted_lists = sorted(zip(average_remaining_list_length, available_guesses_initial[0:1]))
-            tuples = zip(*sorted_lists)
-            sorted_values, sorted_words = [ list(tuple) for tuple in  tuples]
+            sorted_lists = sorted(zip(metric, available_guesses_initial[0:100]),reverse = reversed)
         else:
-            sorted_lists = sorted(zip(average_remaining_list_length, available_guesses_initial))
-            tuples = zip(*sorted_lists)
-            sorted_values, sorted_words = [ list(tuple) for tuple in  tuples]
-
+            sorted_lists = sorted(zip(metric, available_guesses_initial),reverse = reversed)
+        tuples = zip(*sorted_lists)
+        sorted_values, sorted_words = [ list(tuple) for tuple in  tuples]      
         
         if verbose:
-            print(f'Top {number_of_results_to_display} Results: Possible answers in \033[1;30;42mgreen\033[0;0m')
-            if mode == 'ave':
-                print(" word | (likely length of narrowed list)")
+            print_results(sorted_words,sorted_values,available_answers_initial,mode = mode,
+                              number_of_results_to_display = number_of_results_to_display)
+        if mode == 'all':
+            sorted_values_return = []
+            for tuple in sorted_values:
+                sorted_values_return.append(tuple[0])
+            return sorted_words, sorted_values_return, available_answers_initial
+        else:
+            return sorted_words, sorted_values, available_answers_initial
+
+    
+
+def print_results(sorted_words,sorted_values,available_answers_initial,mode = 'ave',number_of_results_to_display = 20):
+    answer_available = False
+    print(f'Top {number_of_results_to_display} Results: Possible answers in \033[1;30;42mgreen\033[0;0m')
+    
+    if mode == 'ave':
+        print(" word | (likely length of narrowed list)")
+    elif mode == 'minimax':
+        print(" word | (maximum length of narrowed list)")
+    elif mode == 'fastest':
+        print(" word | (chance of correct next guess)")
+    elif mode == 'all':
+        print(" word |(ave length|(max length|(chance right")
+        print("      |  of list )|  of list )|  next guess)")
+    else:
+        raise KeyError(f'mode: {mode}, not available.')
+
+    for word_index, (sorted_word, sorted_value) in list(enumerate(zip(sorted_words, sorted_values))):
+        if word_index >= number_of_results_to_display and answer_available:
+            break
+        elif word_index == number_of_results_to_display:
+            print("...")
+        elif word_index<number_of_results_to_display:
+            if sorted_word in available_answers_initial:
+                print_line(sorted_word,sorted_value,mode = mode,in_answers = True)
+                answer_available = True
             else:
-                print(" word | (maximum length of narrowed list)")
-            answer_available = False
-            for word_index, (sorted_word, sorted_value) in list(enumerate(zip(sorted_words, sorted_values))):
-                if word_index == number_of_results_to_display:
-                    break
-                if sorted_word in available_answers_initial:
-                    print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % sorted_value})\033[0;0m')
-                    answer_available = True
-                else:
-                    print(f'{sorted_word} | ({"%.3f" % sorted_value})')
+                print_line(sorted_word,sorted_value,mode = mode,in_answers = False)
+        else:
+            if sorted_word in available_answers_initial:
+                print_line(sorted_word,sorted_value,mode = mode,in_answers = True)
+                answer_available = True
+            
+def print_line(sorted_word,sorted_value,mode = 'ave',in_answers = False):
+    if mode == 'ave':
+        if in_answers:
+            print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % sorted_value})\033[0;0m')
+        else:
+            print(f'{sorted_word} | ({"%.3f" % sorted_value})')      
+    elif mode == 'minimax':
+        if in_answers:
+            print(f'\033[1;30;42m{sorted_word} | ({"%d" % sorted_value})\033[0;0m')
+        else:
+            print(f'{sorted_word} | ({"%d" % sorted_value})') 
+    elif mode == 'fastest':
+        if in_answers:
+            print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % (sorted_value*100)}%)\033[0;0m')
+        else:
+            print(f'{sorted_word} | ({"%.3f" % (sorted_value*100)}%)')
+    elif mode == 'all':
+        if in_answers:
+            print(f'\033[1;30;42m{sorted_word} |  ({"%5.2f" % sorted_value[0]})  |   '+\
+                      f'({"%3d" % sorted_value[1]})   |   ({"%.2f" % (sorted_value[2]*100)}%)\033[0;0m')
+        else:
+            print(f'{sorted_word} |  ({"%5.2f" % sorted_value[0]})  |   '+\
+                      f'({"%3d" % sorted_value[1]})   |   ({"%.2f" % (sorted_value[2]*100)}%)') 
+    else:
+        raise KeyError(f'mode: {mode}, not available.')
+    
 
-            if not (answer_available):
-                print("...")
-                for word_index, (sorted_word, sorted_value) in list(enumerate(zip(sorted_words, sorted_values))):
-                    if sorted_word in available_answers_initial: #{" %5d" % guess_index}
-                        print(f'\033[1;30;42m{sorted_word} | ({"%.3f" % sorted_value})\033[0;0m')
-                        answer_available = True
-                        break
-        return sorted_words, sorted_values, available_answers_initial
-
-def helper(mode = 'ave'):
+def helper(mode = 'ave',number_of_results_to_display = 20):
     av = AvailableWords()
     while len(av) > 1:
-        print("length of all guesses is",len(all_guesses))
         calc_outcomes(rerun=do_calculated_first_guesses_rerun,
-                      number_of_results_to_display=first_guess_number_of_results_to_display,
+                      number_of_results_to_display=number_of_results_to_display,
                       known_wrong_positions_initial=av.known_wrong_positions,
                       available_answers_initial=av.remaining_words,
                       known_positions_initial=av.known_positions,
-                      available_guesses_initial=av.all_guesses,mode = mode)
+                      available_guesses_initial=av.all_guesses,
+                      mode = mode)
         av.ask_guess()
 
 
 if __name__ == '__main__':
-    helper(mode = 'ave')
+    helper(mode = 'all',number_of_results_to_display=25)
     #calc_outcomes(rerun=False, number_of_results_to_display=20,mode = 'ave')
     #calc_outcomes(rerun = False,verbose = False)
     #calc_outcomes(['shape', 'drive'], ['22202', '00202'])
