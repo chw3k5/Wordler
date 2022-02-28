@@ -85,7 +85,7 @@ class GetHint:
             return random.choice(remaining_words)
 
     def jordan(self, guess_words, guess_results, skip_calculation=False,mode = 'all',
-               pick_possible_factor=1.001, start_word=None, bros=False, bros_number=100):
+               pick_possible_factor=1.01, start_word=None, bros=False, bros_number=100):
 
         previous_decision = self.check_decision_memory(guess_words, guess_results)
         if previous_decision != None:
@@ -136,8 +136,11 @@ class GetHint:
                 self.add_decision_memory(sorted_word, guess_words, guess_results)
                 return sorted_word
             elif sorted_value*pick_possible_factor > sorted_values[0] and mode == 'fastest':
-                self.add_decision_memory(sorted_words[0], guess_words, guess_results)
-                return sorted_words[0]
+                self.add_decision_memory(sorted_words, guess_words, guess_results)
+                return sorted_word
+            elif len(guess_words) > 0 and mode == 'fastest': # always try to get right after first guess
+                self.add_decision_memory(sorted_words, guess_words, guess_results)
+                return sorted_word
             else:
                 self.add_decision_memory(sorted_words[0], guess_words, guess_results)
                 return sorted_words[0]

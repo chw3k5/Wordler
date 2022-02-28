@@ -134,12 +134,20 @@ def calculate_max_remaining_list_length(remaining_words_given_outcome, length_re
     return average_remaining_list_length
 
 def calculate_best_chance_after_one_guess(remaining_words_given_outcome, length_remaining_words):
+    '''
+    probablity of right per outcome is 1/len_remaining_list)
+    probabiliy of getting outcome is len_remaining_list/total_remaining_words
+    chance after one guess is the sum of the product of those
+    which is just the number of total possible outcomes/total_remaining_words
+    which is not what I intuitively expected
+    this mode assumes you will try to guess possible answers after this guess
+    '''
     metric = []
     for outcomes_this_guess in remaining_words_given_outcome:
         values = []
         for outcome in outcomes_this_guess:
             if outcome !=0:
-                values.append(1./outcome)
+                values.append(1.)
         sum_values = float(sum(values))
         metric.append(sum_values / length_remaining_words)
     return metric
@@ -461,7 +469,7 @@ def helper(mode = 'ave',number_of_results_to_display = 20):
 
 
 if __name__ == '__main__':
-    helper(mode = 'all',number_of_results_to_display=25)
+    helper(mode = 'fastest',number_of_results_to_display=25)
     #calc_outcomes(rerun=False, number_of_results_to_display=20,mode = 'ave')
     #calc_outcomes(rerun = False,verbose = False)
     #calc_outcomes(['shape', 'drive'], ['22202', '00202'])
