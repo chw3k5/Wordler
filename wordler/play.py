@@ -328,7 +328,7 @@ class Wordle:
             name_str = f'The bot, {self.username},'
         else:
             name_str = f'{self.username}'
-        self.user_stats.add_game(solution_word=self.word, guesses=self.guessed_words)
+        self.user_stats.add_game(solution_word=self.word, guesses=self.guessed_words,guess_results = self.guessed_results)
         print(f'\n\n{name_str} solved the puzzle in {self.number_of_guesses} guesses{punctuation}\n')
         print(self.share_text)
 
