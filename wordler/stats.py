@@ -139,37 +139,39 @@ class UserStats:
             print(hist_str)
         return hist_str
 
-    def compute_guesses_per_len(self):
+    def compute_guesses_per_len(self,save = False):
         self.calc()
         max_guesses = max(list(self.by_number_of_guesses.keys()))
         for key in self.results_per_word.keys(): # make all lists same size for sorting
             for j in range(0,max_guesses-len(self.results_per_word[key]['guesses'])):
                 self.results_per_word[key]['guess_results'].append('na   ')
+                self.results_per_word[key]['guesses'].append('na   ')
 
-        dict_of_list = {}
+        list_of_lists = []
+        list_of_lists_words = []
         for j in range(0,max_guesses):
-            dict_of_list[str(j)] = []
+            list_of_lists.append([])
+            list_of_lists_words.append([])
             for key in self.results_per_word.keys():
-                dict_of_list[str(j)].append(self.results_per_word[key]['guess_results'][j])
-
+                list_of_lists[j].append(self.results_per_word[key]['guess_results'][j])
+                list_of_lists_words[j].append(self.results_per_word[key]['guesses'][j])
+        
         guess_numbers = []
         for key in self.results_per_word.keys():
             guess_numbers.append(self.results_per_word[key]['guess_number'])
 
-        # just checking first 5 guesses
-        zipped = zip(dict_of_list['0'],dict_of_list['1'],dict_of_list['2'],dict_of_list['3'],\
-                         dict_of_list['4'],dict_of_list['5'],guess_numbers)
+        zipped = zip(*list_of_lists,*list_of_lists_words,guess_numbers)
         sorted_lists = sorted(zipped)
-        dict_of_list_sorted = {}
-        guess_numbers_sorted = []
+        *list_of_lists_sorted,guess_numbers_sorted = zip(*sorted_lists)
 
-        dict_of_list_sorted['0'],dict_of_list_sorted['1'],dict_of_list_sorted['2'],dict_of_list_sorted['3'],\
-          dict_of_list_sorted['4'],dict_of_list_sorted['5'],guess_numbers_sorted = zip(*sorted_lists)
-
-        #for i in range(0,len(dict_of_list_sorted['0'])):
-        #    print(dict_of_list_sorted['0'][i],dict_of_list_sorted['1'][i],dict_of_list_sorted['2'][i],\
-        #              dict_of_list_sorted['3'][i],dict_of_list_sorted['4'][i],dict_of_list_sorted['5'][i],\
-        #              guess_numbers_sorted[i])
+        # for debuging
+        #print(*list_of_lists_sorted)
+        #for i in range(0,len(list_of_lists_sorted[0])):
+        #    print_str = str(i)+" "
+        #    for j in range(0,max_guesses*2):
+        #        print_str += str(list_of_lists_sorted[j][i])+" "#+str(list_of_lists_words_sorted[j][i])+" "
+        #    print_str += str(guess_numbers_sorted[i])
+        #    print(print_str)
 
         len_list = []
         guess_count_list = []
@@ -177,21 +179,23 @@ class UserStats:
         for j in range(0,max_guesses):
             count = 1
             guess_count = 0
-            for k in range(1,len(dict_of_list_sorted[str(j)])):
-                if k == len(dict_of_list_sorted[str(j)])-1: # stop counting you have reached end of list
+            for k in range(1,len(list_of_lists_sorted[j])):
+                if k == len(list_of_lists_sorted[j])-1: # stop counting you have reached end of list
                     if count !=1:
-                        if dict_of_list_sorted[str(j)][k] == dict_of_list_sorted[str(j)][k-1] and\
-                          dict_of_list_sorted[str(j)][k] != 'na   ' and\
-                          dict_of_list_sorted[str(j)][k] != '22222':
+                        if list_of_lists_sorted[j][k] == list_of_lists_sorted[j][k-1] and\
+                          list_of_lists_sorted[max(j-1,0)][k] == list_of_lists_sorted[max(j-1,0)][k-1] and \
+                          list_of_lists_sorted[j][k] != 'na   ' and\
+                          list_of_lists_sorted[j][k] != '22222':
                             count = count +1
                             guess_count = guess_count + guess_numbers_sorted[k-1]-j-1
-                        len_list.append(count)
-                        guess_count_list.append(guess_count)
+                            len_list.append(count)
+                            guess_count_list.append(guess_count)
                     count = 1
                     guess_count = 0
-                elif dict_of_list_sorted[str(j)][k] == dict_of_list_sorted[str(j)][k-1] and \
-                  dict_of_list_sorted[str(j)][k] != 'na   ' and \
-                  dict_of_list_sorted[str(j)][k] != '22222':
+                elif list_of_lists_sorted[j][k] == list_of_lists_sorted[j][k-1] and \
+                  list_of_lists_sorted[max(j-1,0)][k] == list_of_lists_sorted[max(j-1,0)][k-1] and \
+                  list_of_lists_sorted[j][k] != 'na   ' and \
+                  list_of_lists_sorted[j][k] != '22222':
                     count = count +1
                     guess_count = guess_count + guess_numbers_sorted[k-1]-j-1
                 else:
@@ -209,7 +213,7 @@ class UserStats:
         ave_list_len = []
         ave_list = []
         count_list = []
-        for i in range(0,len(dict_of_list_sorted['0'])+1):
+        for i in range(0,len(list_of_lists_sorted[0])+1):
             if len_list.count(i)>0:
                 count = 0
                 total_guesses = 0
@@ -225,10 +229,16 @@ class UserStats:
         print("list length| ave guess cost | n occurances")
         for i in range(0,len(ave_list)):
             print(f'   {"%3d" % ave_list_len[i]}     | '+ \
-                      f'     {"%3.2f" % ave_list[i]}      |    {"%4d" % count_list[i]}       ') 
-                               
+                      f'     {"%3.2f" % ave_list[i]}      |    {"%4d" % count_list[i]}       ')
+
+        if save:
+            with open(stats_dir+"/"+self.username+"_guess_cost.csv", 'w') as f:
+                for i in range(0,len(len_list)):
+                    line_str = str(len_list[i])+","+ str(guesses_per_word[i]) +"\n"
+                    f.write(line_str)
+        
 
 if __name__ == '__main__':
-    us = UserStats(username='trace_fastest_cost', hard_mode=False)
+    us = UserStats(username='Jordan', hard_mode=False)
     us.get_histogram_str(verbose=True)
-    #us.compute_guesses_per_len()
+    #us.compute_guesses_per_len(save = True)
