@@ -5,8 +5,6 @@ from multiprocessing import Pool
 from narrow import calc_remaining_words, AvailableWords
 from read_words import write_calculated_results, all_answers, all_guesses, all_outcomes_list, read_calculated_results
 import math
-import matplotlib.pyplot as plt
-import numpy as np
 
 # to do
 # remove checksum in not rerun for first guess
@@ -173,7 +171,7 @@ def calculate_best_chance_after_one_guess(remaining_words_given_outcome, length_
     return metric
 
 def power_law(x, a, b, c):
-    return a*np.power(x, b)+c
+    return a*math.pow(x, b)+c
 
 def dict_of_guess_cost_per_list_len():
     cost = {}
