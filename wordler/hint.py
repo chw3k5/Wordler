@@ -84,12 +84,12 @@ class GetHint:
         else:
             return random.choice(remaining_words)
 
-    def jordan(self, guess_words, guess_results, skip_calculation=False,mode = 'all',
-               pick_possible_factor=1.01, start_word=None, bros=False, bros_number=100):
+    def jordan(self, guess_words, guess_results, skip_calculation=False, mode =['split','variance'],
+               pick_possible_factor=1.0001, start_word='salet', bros=False, bros_number=100):
 
         previous_decision = self.check_decision_memory(guess_words, guess_results)
         if previous_decision != None:
-            print("Already decided")
+            print("Already decided") 
             return previous_decision
 
         if not skip_calculation:
@@ -132,13 +132,10 @@ class GetHint:
             for sorted_word, sorted_value in zip(sorted_words, sorted_values):
                 if sorted_word in available_answers:
                     break
-            if sorted_value < sorted_values[0] * pick_possible_factor and mode != 'fastest':
+            if sorted_value < sorted_values[0] * pick_possible_factor and mode[0] != 'split':
                 self.add_decision_memory(sorted_word, guess_words, guess_results)
                 return sorted_word
-            elif sorted_value*pick_possible_factor > sorted_values[0] and mode == 'fastest':
-                self.add_decision_memory(sorted_word, guess_words, guess_results)
-                return sorted_word
-            elif len(guess_words) > 0 and mode == 'fastest': # always try to get right after first guess
+            elif sorted_value*pick_possible_factor < sorted_values[0] and mode[0] == 'split':
                 self.add_decision_memory(sorted_word, guess_words, guess_results)
                 return sorted_word
             else:
