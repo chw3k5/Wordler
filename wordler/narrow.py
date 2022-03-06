@@ -380,11 +380,15 @@ class AvailableWords:
         self.get_max_vowels()
 
     def add_guess(self, guess_word, guess_results):
+        known_wrong_positions_init = deepcopy(self.known_wrong_positions)
+        know_positions_init = deepcopy(self.known_positions)
+
+
         self.known_wrong_positions, known_positions_this_guess, required_letter_count_this_guess, available_answers,\
             known_not_used = \
-            calc_remaining_words(known_wrong_positions=self.known_wrong_positions,
+            calc_remaining_words(known_wrong_positions=known_wrong_positions_init,
                                  available_answers=list(self), guess_word=guess_word,
-                                 guess_results=guess_results, known_positions=self.known_positions)
+                                 guess_results=guess_results, known_positions=know_positions_init)
         self.known_positions.update(known_positions_this_guess)
         for letter in required_letter_count_this_guess.keys():
             if letter not in self.required_letter_count.keys() or \
@@ -393,9 +397,9 @@ class AvailableWords:
 
         _known_wrong_positions, _known_positions_this_guess, _required_letter_count_this_guess, available_guesses,\
             _known_not_used = \
-            calc_remaining_words(known_wrong_positions=self.known_wrong_positions,
+            calc_remaining_words(known_wrong_positions=known_wrong_positions_init,
                                  available_answers=self.remaining_guesses, guess_word=guess_word,
-                                 guess_results=guess_results, known_positions=self.known_positions)
+                                 guess_results=guess_results, known_positions=know_positions_init)
         self.set_data(word_list=available_answers, guesses=available_guesses)
         # display the results
         if self.verbose:

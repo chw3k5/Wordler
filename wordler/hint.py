@@ -19,46 +19,32 @@ class GetHint:
             if self.hint_type not in self.hint_types:
                 raise KeyError(f"'{self.hint_type}' is not one of hint types: {self.hint_types}")
         # data that is initialized later
-        self.av = av
         self.guess_words = None
         self.guess_results = None
         self.decision_memory = {}  # for jordan's bot to not have to recalculate
         # data that is initialized now
-        self.reset(av=self.av)
+        self.reset()
 
-    def reset(self, av=None):
-        if av is None and self.bot_mode:
-            if self.hint_type is None:
-                raise ValueError('hint_type cannot be None when bot_mode==True')
-            self.av = AvailableWords(verbose=False)
+    def reset(self):
         self.guess_words = []
         self.guess_results = []
 
 
-    def find_remaining_guesses(self, guess_words, guess_results):
-        self.av = AvailableWords(verbose=False)
-        for guess_word, results_this_guess in zip(guess_words, guess_results):
-            self.av.ask_guess(guess_word=guess_word, results=results_this_guess)
-
-    def caleb(self, guess_words, guess_results, skip_calculation=False):
-        if not skip_calculation:
-            self.find_remaining_guesses(guess_words=guess_words, guess_results=guess_results)
+    def caleb(self, av):
         top_five_words = []
-        ranked_words_by_rank = self.av.ranked_words_by_rank
+        ranked_words_by_rank = av.ranked_words_by_rank
         for word_index, (word, rank) in list(enumerate(ranked_words_by_rank)):
             top_five_words.append(word)
             if len(top_five_words) == 5:
                 break
         return random.choice(top_five_words)
 
-    def natalie(self, guess_words, guess_results, skip_calculation=False):
-        if not skip_calculation:
-            self.find_remaining_guesses(guess_words=guess_words, guess_results=guess_results)
+    def natalie(self, av):
         top_words = []
-        ranked_vowel_guesses_by_rank = self.av.ranked_vowel_guesses_by_rank
+        ranked_vowel_guesses_by_rank = av.ranked_vowel_guesses_by_rank
         if ranked_vowel_guesses_by_rank:
             for word_index, (word, rank) in list(enumerate(ranked_vowel_guesses_by_rank)):
-                if self.hard_mode and word in self.av.remaining_guesses:
+                if self.hard_mode and word in av.remaining_guesses:
                     top_words.append(word)
                 else:
                     top_words.append(word)
@@ -66,35 +52,31 @@ class GetHint:
                     break
             return random.choice(top_words)
         else:
-            return self.jada(guess_words=guess_words, guess_results=guess_results, skip_calculation=True)
+            return self.jada(av=av)
 
-    def jada(self, guess_words, guess_results, skip_calculation=False):
-        if not skip_calculation:
-            self.find_remaining_guesses(guess_words=guess_words, guess_results=guess_results)
+    def jada(self, av):
         top_words = []
-        ranked_guesses_by_rank = self.av.ranked_guesses_by_rank
-        if len(self.av.remaining_words) > 2:
+        ranked_guesses_by_rank = av.ranked_guesses_by_rank
+        if len(av.remaining_words) > 2:
             for word_index, (word, rank) in list(enumerate(ranked_guesses_by_rank)):
-                if self.hard_mode and word in self.av.remaining_guesses:
-                    top_words.append(word)
+                if self.hard_mode:
+                    if word in av.remaining_guesses:
+                        top_words.append(word)
                 else:
                     top_words.append(word)
                 if len(top_words) == 13:
                     break
             return random.choice(top_words)
         else:
-            return random.choice(self.av.remaining_words)
+            return random.choice(av.remaining_words)
 
-    def jordan(self, guess_words, guess_results, skip_calculation=False, mode =('split','variance'),
+    def jordan(self, av, guess_words, guess_results, mode=['split','variance'],
                pick_possible_factor=1.0001, start_word='salet', bros=False, bros_number=100):
 
         previous_decision = self.check_decision_memory(guess_words, guess_results)
         if previous_decision != None:
             print("Already decided") 
             return previous_decision
-
-        if not skip_calculation:
-            self.find_remaining_guesses(guess_words=guess_words, guess_results=guess_results)
 
         if start_word is not None:
             if len(guess_words) < 1:
@@ -103,27 +85,27 @@ class GetHint:
 
         if bros:  # combine caleb and jordan (who are brothers)
             top_words = []
-            ranked_guesses_by_rank = self.av.ranked_guesses_by_rank
+            ranked_guesses_by_rank = av.ranked_guesses_by_rank
             for word_index, (word, rank) in list(enumerate(ranked_guesses_by_rank)):
                 top_words.append(word)
                 if len(top_words) == bros_number:
                     break
-            check_guesses = top_words + self.av.remaining_words
+            check_guesses = top_words + av.remaining_words
 
             sorted_words, sorted_values, available_answers = \
                 calc_outcomes(rerun=False, verbose=True,
                               number_of_results_to_display=10,
-                              known_wrong_positions_initial=self.av.known_wrong_positions,
-                              available_answers_initial=self.av.remaining_words,
-                              known_positions_initial=self.av.known_positions,
+                              known_wrong_positions_initial=av.known_wrong_positions,
+                              available_answers_initial=av.remaining_words,
+                              known_positions_initial=av.known_positions,
                               available_guesses_initial=check_guesses,mode = mode)
         else:
             sorted_words, sorted_values, available_answers = \
                 calc_outcomes(rerun=False, verbose=True,
                               number_of_results_to_display=10,
-                              known_wrong_positions_initial=self.av.known_wrong_positions,
-                              available_answers_initial=self.av.remaining_words,
-                              known_positions_initial=self.av.known_positions,mode = mode)
+                              known_wrong_positions_initial=av.known_wrong_positions,
+                              available_answers_initial=av.remaining_words,
+                              known_positions_initial=av.known_positions,mode = mode)
 
         if sorted_words[0] in available_answers:
             self.add_decision_memory(sorted_words[0], guess_words, guess_results)
@@ -168,17 +150,13 @@ class GetHint:
             else:
                 return None
 
-    def get_hint(self, guess_words, guess_results):
-        if self.hint_type is None:
-            hint_type = random.choice(self.hint_types)
-        else:
-            hint_type = self.hint_type
-        return self.__getattribute__(hint_type)(guess_words=guess_words, guess_results=guess_results)
+    def get_hint(self, av, guess_words, guess_results, hint_type=None):
+        if hint_type is None:
+            if self.hint_type is None:
+                hint_type = random.choice(self.hint_types)
+            else:
+                hint_type = self.hint_type
+        if hint_type == 'jordan':
+            return self.__getattribute__(hint_type)(av, guess_words, guess_results)
+        return self.__getattribute__(hint_type)(av)
 
-
-if __name__ == '__main__':
-    list_pos = -4
-    get_hint = GetHint(hint_type='jada', hard_mode=True)
-    guess_words = ['alter', 'owner', 'miser', 'sheer']
-    guess_results = ['00022', '00022', '00122', '11022']
-    print(get_hint.get_hint(guess_words=guess_words[:list_pos], guess_results=guess_results[:list_pos]))

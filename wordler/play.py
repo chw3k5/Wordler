@@ -97,11 +97,8 @@ class Wordle:
         self.guessed_results = None
         self.word = None
         self.console_str = None
-        self.av = AvailableWords(verbose=False)
-        if self.bot_mode:  # initialize once don't reset
-            self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True, av=self.av)
-        else:
-            self.gh = None
+        self.av = None
+        self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=bot_mode)
         # stats data, initialized only once
         self.user_stats = UserStats(username=self.username, hard_mode=self.hard_mode)
         self.prior_guesses = self.user_stats.get_prior_guesses()
@@ -111,7 +108,7 @@ class Wordle:
         if allowed_words_not_played:
             self.available_words = list(allowed_words_not_played)
         else:
-            self.available_words = copy(all_word_list)
+            self.available_words = deepcopy(all_word_list)
         shuffle(self.available_words)
 
     def __enter__(self):
@@ -128,10 +125,11 @@ class Wordle:
         self.display_history = ''
 
         self.av = AvailableWords(verbose=False)
-        if self.bot_mode:
-            # self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True)
-            self.gh.av = self.av
-        self.remaining_guesses = deepcopy(self.allowed_guesses)
+        self.gh.reset()
+        if self.hard_mode:
+            self.remaining_guesses = set(self.av.remaining_guesses)
+        else:
+            self.remaining_guesses = deepcopy(all_guesses)
 
         self.unknown = deepcopy(self.allowed_letters)
         self.known_in_right_place = set()
@@ -155,13 +153,14 @@ class Wordle:
             raise ValueError(f'The user input word must have a length equal to 5, revived {self.word}')
         if remove_word:
             try:
-                self.available_words.remove(word)
+                self.available_words.remove(self.word)
             except ValueError:
-                # we need to disable hints when a word not from the all_answers set is used.
-                self.allow_hint = False
-                if self.bot_mode:
-                    raise ValueError(f'Words like "{self.word}" that are not in the all_answers list cannot be ' +
-                                     f'used when bot_mode=True')
+                if self.word not in all_answers:
+                    # we need to disable hints when a word not from the all_answers set is used.
+                    self.allow_hint = False
+                    if self.bot_mode:
+                        raise ValueError(f'Words like "{self.word}" that are not in the all_answers list cannot be ' +
+                                         f'used when bot_mode=True')
         for letter in self.word:
             if letter not in self.letter_counter.keys():
                 self.letter_counter[letter] = 0
@@ -186,8 +185,8 @@ class Wordle:
             raw_word = input(f"{mode_str}\nEnter guess number: {self.number_of_guesses}{hint_str}\n ")
             test_word = raw_word.strip().lower()
             if self.allow_hint and test_word == 'hint':
-                get_hint = GetHint(hint_type=hint_type, hard_mode=self.hard_mode)
-                test_word = get_hint.get_hint(guess_words=self.guessed_words, guess_results=self.guessed_results)
+                test_word = self.gh.get_hint(av=self.av, guess_words=self.guessed_words,
+                                             guess_results=self.guessed_results, hint_type=hint_type)
             if len(test_word) == 5 and test_word in self.remaining_guesses:
                 guess_word = test_word
         return guess_word
@@ -281,12 +280,12 @@ class Wordle:
         self.guessed_words.append(guess_word)
         self.guessed_results.append(guess_results)
         # update the allowed guesses
-        if self.hard_mode or self.bot_mode:
-            self.av.add_guess(guess_word=guess_word, guess_results=guess_results)
-        if self.hard_mode:
-            self.remaining_guesses = set(self.av.remaining_guesses)
-        else:
+        self.av.add_guess(guess_word=guess_word, guess_results=guess_results)
+        if not self.hard_mode:
             self.remaining_guesses.remove(guess_word)
+        else:
+            self.remaining_guesses = set(self.av.remaining_guesses)
+
 
         self.get_console_text()
         self.display_history += text_str + '\n'
@@ -320,8 +319,7 @@ class Wordle:
         print(self.share_text)
 
     def bot_turn(self):
-        return self.gh.__getattribute__(self.hint_type)(guess_words=self.guessed_words,
-                                                        guess_results=self.guessed_results, skip_calculation=True)
+        return self.gh.__getattribute__(self.hint_type)()
 
 
 def play(console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None, bot_mode=False):
