@@ -1,5 +1,6 @@
 import os
 import math
+from play_engine import determine_test_types
 
 dir_name_this_file = os.path.dirname(os.path.realpath(__file__))
 stats_dir = os.path.join(dir_name_this_file, 'stats')
@@ -35,10 +36,27 @@ class UserStats:
         if os.path.exists(self.stats_file_path):
             with open(self.stats_file_path, 'r') as f:
                 for raw_data_this_word in [raw_line.strip() for raw_line in f.readlines()]:
-                    solution_word, guess_number, guess_words, guess_results = raw_data_this_word.split('|')
+
+                    solution_word, guess_number, *guess_words_and_results = raw_data_this_word.split('|')
+                    if len(guess_words_and_results) == 2:
+                        guess_words, guess_results = guess_words_and_results
+                        guess_words = guess_words.split(',')
+                        guess_results = guess_results.split(',')
+                    else:
+                        guess_words = guess_words_and_results[0].split(',')
+                        guess_results = []
+                        for guess_word in guess_words:
+                            index_to_guess_letter_and_display_type, correct_guess_letters, wrong_place_letters, \
+                            used_too_many_times_letters = determine_test_types(guess_word=guess_word,
+                                                                               solution_word=solution_word)
+                            guess_result = ''
+                            for index_key in sorted(index_to_guess_letter_and_display_type):
+                                guess_letter, letter_result = index_to_guess_letter_and_display_type[index_key]
+                                guess_result += letter_result
+                            guess_results.append(guess_result)
                     self.results_per_word[solution_word] = {'guess_number': int(guess_number),
-                                                            'guesses': guess_words.split(','),
-                                                            'guess_results': guess_results.split(',')}
+                                                            'guesses': guess_words,
+                                                            'guess_results': guess_results}
         else:
             self.results_per_word = {}
 
@@ -71,7 +89,7 @@ class UserStats:
             for line_str in line_strs:
                 f.write(line_str)
 
-    def add_game(self, solution_word, guesses,guess_results):
+    def add_game(self, solution_word, guesses, guess_results):
         guess_number = len(guesses)
         if guess_number == 0:
             raise ValueError(f'0 guesses is not a possible number of guesses to reach a puzzle solution.')

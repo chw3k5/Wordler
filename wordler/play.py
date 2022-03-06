@@ -1,10 +1,11 @@
 import random
-from copy import copy
+from copy import deepcopy
 from getpass import getuser
 from random import shuffle
 from string import ascii_lowercase
 
 from read_words import all_word_list, all_answers, allowed_guesses, all_guesses
+from play_engine import determine_test_types
 from narrow import allowed_true, allowed_false, allowed_stats, clear_console, AvailableWords
 from hint import GetHint
 from stats import UserStats
@@ -43,8 +44,8 @@ def is_unknown_test(letter):
 
 class Wordle:
     allowed_letters = set(ascii_lowercase)
-    allowed_words = copy(all_answers)
-    allowed_guesses = copy(allowed_guesses)
+    allowed_words = deepcopy(all_answers)
+    allowed_guesses = deepcopy(allowed_guesses)
 
     qwerty_order = [['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
                     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
@@ -96,9 +97,9 @@ class Wordle:
         self.guessed_results = None
         self.word = None
         self.console_str = None
-        self.av = None
+        self.av = AvailableWords(verbose=False)
         if self.bot_mode:  # initialize once don't reset
-            self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True)
+            self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True, av=self.av)
         else:
             self.gh = None
         # stats data, initialized only once
@@ -125,14 +126,14 @@ class Wordle:
         self.guessed_results = []
         self.share_text = ''
         self.display_history = ''
-        if self.hard_mode or self.bot_mode:
-            self.av = AvailableWords(verbose=False)
+
+        self.av = AvailableWords(verbose=False)
         if self.bot_mode:
             # self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=True)
             self.gh.av = self.av
-        self.remaining_guesses = copy(self.allowed_guesses)
+        self.remaining_guesses = deepcopy(self.allowed_guesses)
 
-        self.unknown = copy(self.allowed_letters)
+        self.unknown = deepcopy(self.allowed_letters)
         self.known_in_right_place = set()
         self.known_in_wrong_place = set()
         self.known_wrong = set()
@@ -243,42 +244,28 @@ class Wordle:
         return console_str
 
     def determine_test_types(self, guess_word):
-        index_to_guess_letter_and_display_type = {}
-        remaining_word_indexes = list(range(len(guess_word)))
-        remaining_word_letters = list(self.word)
-        for correct_index in list(remaining_word_indexes):
-            guess_letter = guess_word[correct_index]
-            word_letter = self.word[correct_index]
-            if word_letter == guess_letter:
-                index_to_guess_letter_and_display_type[correct_index] = (guess_letter, '2')
-                self.remove_unknown(letter=guess_letter)
-                if guess_letter in self.known_in_wrong_place:
-                    self.known_in_wrong_place.remove(guess_letter)
-                self.known_in_right_place.add(guess_letter)
-                remaining_word_indexes.remove(correct_index)
-                remaining_word_letters.remove(guess_letter)
-
-        for is_used_index in list(remaining_word_indexes):
-            guess_letter = guess_word[is_used_index]
-            if guess_letter in remaining_word_letters:
-                index_to_guess_letter_and_display_type[is_used_index] = (guess_letter, '1')
-                self.remove_unknown(letter=guess_letter)
-                if guess_letter not in self.known_in_right_place:
-                    # this is not a double letter that is unused, but a letter that is in the word in different place
-                    self.known_in_wrong_place.add(guess_letter)
-                remaining_word_indexes.remove(is_used_index)
-                remaining_word_letters.remove(guess_letter)
-
-        for is_used_index in list(remaining_word_indexes):
-            guess_letter = guess_word[is_used_index]
-            index_to_guess_letter_and_display_type[is_used_index] = (guess_letter, '0')
-            self.remove_unknown(letter=guess_letter)
-            if guess_letter not in self.known_in_right_place and guess_letter not in self.known_in_wrong_place:
+        index_to_guess_letter_and_display_type, correct_guess_letters, wrong_place_letters, \
+        used_too_many_times_letters = \
+            determine_test_types(guess_word=guess_word, solution_word=self.word)
+        # correct letter data
+        for correct_guess_letter in correct_guess_letters:
+            self.remove_unknown(letter=correct_guess_letter)
+            if correct_guess_letter in self.known_in_wrong_place:
+                self.known_in_wrong_place.remove(correct_guess_letter)
+            self.known_in_right_place.add(correct_guess_letter)
+        # wrong_place letters
+        for wrong_place_letter in wrong_place_letters:
+            self.remove_unknown(letter=wrong_place_letter)
+            if wrong_place_letter not in self.known_in_right_place:
+                # this is not a double letter that is unused, but a letter that is in the word in different place
+                self.known_in_wrong_place.add(wrong_place_letter)
+        # letters use too mny times.
+        for used_too_many_times_letter in used_too_many_times_letters:
+            self.remove_unknown(letter=used_too_many_times_letter)
+            if used_too_many_times_letter not in self.known_in_right_place and \
+                    used_too_many_times_letter not in self.known_in_wrong_place:
                 # this is not a double letter that is unused, but a letter the is not used at all
-                self.known_wrong.add(guess_letter)
-            remaining_word_indexes.remove(is_used_index)
-        if len(remaining_word_indexes) != 0:
-            raise TypeError
+                self.known_wrong.add(used_too_many_times_letter)
         return index_to_guess_letter_and_display_type
 
     def print_display(self, guess_word):

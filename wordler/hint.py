@@ -1,4 +1,6 @@
 import random
+from copy import deepcopy
+from read_words import allowed_guesses
 from narrow import AvailableWords
 from calculate_best_words import calc_outcomes
 
@@ -6,7 +8,7 @@ from calculate_best_words import calc_outcomes
 class GetHint:
     hint_types = ['caleb', 'natalie', 'jada', 'jordan']
 
-    def __init__(self, hint_type=None, hard_mode=False, bot_mode=False):
+    def __init__(self, hint_type=None, hard_mode=False, bot_mode=False, av=None):
         # settings
         self.hard_mode = hard_mode
         self.bot_mode = bot_mode
@@ -17,30 +19,30 @@ class GetHint:
             if self.hint_type not in self.hint_types:
                 raise KeyError(f"'{self.hint_type}' is not one of hint types: {self.hint_types}")
         # data that is initialized later
-        self.av = None
-        self.remaining_guesses = None
+        self.av = av
         self.guess_words = None
         self.guess_results = None
         self.decision_memory = {}  # for jordan's bot to not have to recalculate
         # data that is initialized now
-        if bot_mode:
-            if hint_type is None:
+        self.reset(av=self.av)
+
+    def reset(self, av=None):
+        if av is None and self.bot_mode:
+            if self.hint_type is None:
                 raise ValueError('hint_type cannot be None when bot_mode==True')
             self.av = AvailableWords(verbose=False)
-            self.remaining_guesses = set(self.av.remaining_guesses)
-            self.guess_words = []
-            self.guess_results = []
+        self.guess_words = []
+        self.guess_results = []
 
-    def find_remaining_words(self, guess_words, guess_results):
+
+    def find_remaining_guesses(self, guess_words, guess_results):
         self.av = AvailableWords(verbose=False)
         for guess_word, results_this_guess in zip(guess_words, guess_results):
             self.av.ask_guess(guess_word=guess_word, results=results_this_guess)
-        self.remaining_guesses = set(self.av.remaining_guesses)
 
     def caleb(self, guess_words, guess_results, skip_calculation=False):
         if not skip_calculation:
-            self.find_remaining_words(guess_words=guess_words, guess_results=guess_results)
-
+            self.find_remaining_guesses(guess_words=guess_words, guess_results=guess_results)
         top_five_words = []
         ranked_words_by_rank = self.av.ranked_words_by_rank
         for word_index, (word, rank) in list(enumerate(ranked_words_by_rank)):
@@ -51,12 +53,12 @@ class GetHint:
 
     def natalie(self, guess_words, guess_results, skip_calculation=False):
         if not skip_calculation:
-            self.find_remaining_words(guess_words=guess_words, guess_results=guess_results)
+            self.find_remaining_guesses(guess_words=guess_words, guess_results=guess_results)
         top_words = []
         ranked_vowel_guesses_by_rank = self.av.ranked_vowel_guesses_by_rank
         if ranked_vowel_guesses_by_rank:
             for word_index, (word, rank) in list(enumerate(ranked_vowel_guesses_by_rank)):
-                if self.hard_mode and word in self.remaining_guesses:
+                if self.hard_mode and word in self.av.remaining_guesses:
                     top_words.append(word)
                 else:
                     top_words.append(word)
@@ -68,13 +70,12 @@ class GetHint:
 
     def jada(self, guess_words, guess_results, skip_calculation=False):
         if not skip_calculation:
-            self.find_remaining_words(guess_words=guess_words, guess_results=guess_results)
+            self.find_remaining_guesses(guess_words=guess_words, guess_results=guess_results)
         top_words = []
         ranked_guesses_by_rank = self.av.ranked_guesses_by_rank
-        remaining_words = self.av.remaining_words
-        if len(remaining_words) > 2:
+        if len(self.av.remaining_words) > 2:
             for word_index, (word, rank) in list(enumerate(ranked_guesses_by_rank)):
-                if self.hard_mode and word in self.remaining_guesses:
+                if self.hard_mode and word in self.av.remaining_guesses:
                     top_words.append(word)
                 else:
                     top_words.append(word)
@@ -82,9 +83,9 @@ class GetHint:
                     break
             return random.choice(top_words)
         else:
-            return random.choice(remaining_words)
+            return random.choice(self.av.remaining_words)
 
-    def jordan(self, guess_words, guess_results, skip_calculation=False, mode =['split','variance'],
+    def jordan(self, guess_words, guess_results, skip_calculation=False, mode =('split','variance'),
                pick_possible_factor=1.0001, start_word='salet', bros=False, bros_number=100):
 
         previous_decision = self.check_decision_memory(guess_words, guess_results)
@@ -93,7 +94,7 @@ class GetHint:
             return previous_decision
 
         if not skip_calculation:
-            self.find_remaining_words(guess_words=guess_words, guess_results=guess_results)
+            self.find_remaining_guesses(guess_words=guess_words, guess_results=guess_results)
 
         if start_word is not None:
             if len(guess_words) < 1:
