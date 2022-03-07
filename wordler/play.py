@@ -59,9 +59,6 @@ class Wordle:
 
     def __init__(self, console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None,
                  auto_play=False, bot_mode=False, companions=None):
-        hint_type = 'Natalie'
-        auto_play = True
-        hard_mode = True
         # settings
         self.console_type = console_type
         self.first_word = first_word
