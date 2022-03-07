@@ -330,7 +330,8 @@ class Wordle:
         print(self.share_text)
 
     def bot_turn(self):
-        return self.gh.__getattribute__(self.hint_type)()
+        return self.gh.__getattribute__(self.hint_type)(av=self.av, guess_words=self.guessed_words,
+                                             guess_results=self.guessed_results)
 
 
 def play(console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None, auto_play=False,

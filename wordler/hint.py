@@ -106,13 +106,24 @@ class GetHint:
                               known_positions_initial=av.known_positions,
                               available_guesses_initial=check_guesses, mode=mode)
         else:
-            sorted_words, sorted_values, available_answers = \
-                calc_outcomes(rerun=False, verbose=True,
+            if self.hard_mode:
+                sorted_words, sorted_values, available_answers = \
+                  calc_outcomes(rerun=False, verbose=True,
                               number_of_results_to_display=10,
                               known_wrong_positions_initial=av.known_wrong_positions,
                               available_answers_initial=av.remaining_words,
-                              known_positions_initial=av.known_positions, mode=mode)
+                              known_positions_initial=av.known_positions,
+                              available_guesses_initial=av.remaining_guesses, mode=mode)
+            else:
+                sorted_words, sorted_values, available_answers = \
+                  calc_outcomes(rerun=False, verbose=True,
+                              number_of_results_to_display=10,
+                              known_wrong_positions_initial=av.known_wrong_positions,
+                              available_answers_initial=av.remaining_words,
+                              known_positions_initial=av.known_positions,
+                              available_guesses_initial=av.all_guesses, mode=mode)
 
+    
         if sorted_words[0] in available_answers:
             self.add_decision_memory(sorted_words[0], guess_words, guess_results)
             return sorted_words[0]

@@ -333,7 +333,7 @@ def calc(known_wrong_positions_initial=None, available_answers_initial=None,
 def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_results_to_display=25,
                   known_wrong_positions_initial=None, available_answers_initial=None,
                   known_positions_initial=None,available_guesses_initial = None,
-                  verbose = True,mode = 'ave'):
+                  verbose = True,mode = ['split','variance']):
 
     if not isinstance(mode, list):
         mode = [mode]
@@ -341,18 +341,19 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
         available_answers_initial = deepcopy(all_answers)
     if available_guesses_initial is None:
         available_guesses_initial = deepcopy(all_guesses)
+
     """
     There are 3**5 -5(GGGGY) - more for repeated letters possible outcomes
     Given every possible outcome every word is possible
     """
-    if guess_words == None: 
+    if guess_words == None: # not supplyin past guesses and results
         if len(available_answers_initial) != len(all_answers): # detect if supplying rules instead of guesses and results
             if len(available_answers_initial) > 2:
                 remaining_words_given_outcome = calc(known_wrong_positions_initial=known_wrong_positions_initial,
                                                      available_answers_initial=available_answers_initial,
                                                      known_positions_initial=known_positions_initial,
                                                      available_guesses_initial = available_guesses_initial)
-        else:
+        else: # first guess 
             if rerun: #first guesses are a bit slow and only change if word banks are updated
                 remaining_words_given_outcome = calc(known_wrong_positions_initial=known_wrong_positions_initial,
                                                      available_answers_initial=available_answers_initial,
@@ -363,8 +364,8 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
                                          as_csv=write_csv_outcomes,words = write_words)
             else:
                 remaining_words_given_outcome = read_calculated_results(from_csv=read_from_csv_outcomes,words = write_words)
-    else:
-        # generate available answers base on first guess
+    else: # have past guess_words and guess results
+        # generate available answers base on first guess # i don't often use this
         known_wrong_positions_initial, known_positions_initial, required_letter_count_this_guess, \
           available_answers_initial, known_not_used = \
             calc_remaining_words(known_wrong_positions={}, available_answers=deepcopy(all_answers),guess_word=guess_words[0],
@@ -532,10 +533,20 @@ def print_line(sorted_word,sorted_value,mode = 'ave',in_answers = False):
         line += '\033[0;0m'
     print(line)
     
-def helper(mode = 'ave',number_of_results_to_display = 20):
+def helper(mode = 'ave',number_of_results_to_display = 20,hard_mode = False):
     av = AvailableWords()
     while len(av) > 1:
-        calc_outcomes(rerun=do_calculated_first_guesses_rerun,
+        if hard_mode and av.guess_number != 0: # hard and not first
+            print("hard_mode")
+            calc_outcomes(rerun=do_calculated_first_guesses_rerun,
+                      number_of_results_to_display=number_of_results_to_display,
+                      known_wrong_positions_initial=av.known_wrong_positions,
+                      available_answers_initial=av.remaining_words,
+                      known_positions_initial=av.known_positions,
+                      available_guesses_initial=av.remaining_guesses,
+                      mode = mode)
+        else:
+            calc_outcomes(rerun=do_calculated_first_guesses_rerun,
                       number_of_results_to_display=number_of_results_to_display,
                       known_wrong_positions_initial=av.known_wrong_positions,
                       available_answers_initial=av.remaining_words,
@@ -544,9 +555,17 @@ def helper(mode = 'ave',number_of_results_to_display = 20):
                       mode = mode)
         av.ask_guess()
 
-
 if __name__ == '__main__':
-    helper(mode = ['split','variance','minimax','ave','cost'],number_of_results_to_display=25 )
-    #calc_outcomes(rerun=False, number_of_results_to_display=20,mode = 'ave')
-    #calc_outcomes(rerun = False,verbose = False)
-    #calc_outcomes(['shape', 'drive'], ['22202', '00202'])
+    import argparse
+    parser = argparse.ArgumentParser(description='Parser for play.py, a Wordle Emulator.')
+    parser.add_argument('--hard', dest='hard', action='store_true',
+                        help="Turns on Wordle Hard-mode. Hard mode restricts the allowed guessed to solve the puzzle." +
+                             "Guesses in Hard mode must be possible solutions to the puzzle. The default is " +
+                             "--no-hard with all allowed guesses can be used to narrow the field of remaining letters.")
+    parser.add_argument('--no-hard', dest='hard', action='store_false', default=False,
+                        help="Turns off Wordle Hard-mode. Hard mode restricts the allowed guessed to solve the " +
+                             "puzzle. This setting is the default in witch all allowed guesses can be used to narrow " +
+                             "the field of remaining letters.")
+    args = parser.parse_args()
+    helper(mode = ['split','variance','minimax','ave','cost'],hard_mode=args.hard,number_of_results_to_display=25 )
+
