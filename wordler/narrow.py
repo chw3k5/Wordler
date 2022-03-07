@@ -253,6 +253,7 @@ class AvailableWords:
         self.guess_using_remaining = None
         self.ranked_words_by_rank = None
         self.ranked_guesses_by_rank = None
+        self.all_guesses_by_rank = None
         self.ranked_vowel_words_by_rank = None
         self.ranked_vowel_guesses_by_rank = None
         # the method the set/restores the initial state
@@ -364,12 +365,18 @@ class AvailableWords:
                                            key=itemgetter(1), reverse=True)
         self.ranked_guesses_by_rank = sorted([(word, self.get_rank_value(word)) for word in self.remaining_guesses],
                                              key=itemgetter(1), reverse=True)
+        self.all_guesses_by_rank = sorted([(word, self.get_rank_value(word)) for word in self.all_guesses],
+                                          key=itemgetter(1), reverse=True)
 
     def get_max_vowels(self):
-        self.ranked_vowel_words_by_rank = sorted([(word, self.get_rank_value(word, only_vowels=True))
-                                                  for word in list(self)], key=itemgetter(1), reverse=True)
-        self.ranked_vowel_guesses_by_rank = sorted([(word, self.get_rank_value(word, only_vowels=True))
-                                                   for word in self.remaining_guesses], key=itemgetter(1), reverse=True)
+        ranked_vowel_words_by_rank = sorted([(word, self.get_rank_value(word, only_vowels=True))
+                                             for word in list(self)], key=itemgetter(1), reverse=True)
+        self.ranked_vowel_words_by_rank = [(word, rank) for word, rank in ranked_vowel_words_by_rank
+                                           if rank != 0]
+        ranked_vowel_guesses_by_rank = sorted([(word, self.get_rank_value(word, only_vowels=True))
+                                               for word in self.all_guesses], key=itemgetter(1), reverse=True)
+        self.ranked_vowel_guesses_by_rank = [(word, rank) for word, rank in ranked_vowel_guesses_by_rank
+                                             if rank != 0]
 
     def set_data(self, word_list, guesses):
         self.remaining_words = word_list
@@ -382,8 +389,6 @@ class AvailableWords:
     def add_guess(self, guess_word, guess_results):
         known_wrong_positions_init = deepcopy(self.known_wrong_positions)
         know_positions_init = deepcopy(self.known_positions)
-
-
         self.known_wrong_positions, known_positions_this_guess, required_letter_count_this_guess, available_answers,\
             known_not_used = \
             calc_remaining_words(known_wrong_positions=known_wrong_positions_init,

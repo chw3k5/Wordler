@@ -58,13 +58,19 @@ class Wordle:
                    ['r', 's', 't', 'v', 'w', 'x', 'z']]
 
     def __init__(self, console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None,
-                 bot_mode=False, companions=None):
+                 auto_play=False, bot_mode=False, companions=None):
+        hint_type = 'Natalie'
+        auto_play = True
+        hard_mode = True
         # settings
         self.console_type = console_type
         self.first_word = first_word
         self.hard_mode = hard_mode
-        self.allow_hint = allow_hint
-
+        self.auto_play = auto_play
+        if self.auto_play:
+            self.allow_hint = True
+        else:
+            self.allow_hint = allow_hint
         if hint_type is None:
             self.hint_type = None
         else:
@@ -167,6 +173,7 @@ class Wordle:
             self.letter_counter[letter] += 1
 
     def ask_for_word(self):
+        self.number_of_guesses += 1
         guess_word = None
         if self.hard_mode:
             mode_str = '\n(Hard-mode, guess must be possible answer)'
@@ -178,8 +185,10 @@ class Wordle:
                     hint_type = random.choice(GetHint.hint_types)
                 else:
                     hint_type = self.hint_type
-                hint_str = f' (type "hint" to get a hint word from {hint_type[0].upper() + hint_type[1:]})'
+                bot_name = hint_type[0].upper() + hint_type[1:]
+                hint_str = f' (type "hint" to get a hint word from {bot_name})'
             else:
+                bot_name = 'NoName'
                 hint_str = ''
                 hint_type = None
             raw_word = input(f"{mode_str}\nEnter guess number: {self.number_of_guesses}{hint_str}\n ")
@@ -187,7 +196,13 @@ class Wordle:
             if self.allow_hint and test_word == 'hint':
                 test_word = self.gh.get_hint(av=self.av, guess_words=self.guessed_words,
                                              guess_results=self.guessed_results, hint_type=hint_type)
-            if len(test_word) == 5 and test_word in self.remaining_guesses:
+                if self.auto_play and len(test_word) == 5 and test_word in self.remaining_guesses:
+                    guess_word = test_word
+                else:
+                    print(f"\nThe {bot_name} bot suggests using the word: '{test_word}'")
+            elif self.allow_hint and test_word == 'narrow':
+                print(self.av)
+            elif len(test_word) == 5 and test_word in self.remaining_guesses:
                 guess_word = test_word
         return guess_word
 
@@ -268,7 +283,6 @@ class Wordle:
         return index_to_guess_letter_and_display_type
 
     def print_display(self, guess_word):
-        self.number_of_guesses += 1
         text_str = ''
         index_to_guess_letter_and_display_type = self.determine_test_types(guess_word)
         guess_results = ''
@@ -285,7 +299,6 @@ class Wordle:
             self.remaining_guesses.remove(guess_word)
         else:
             self.remaining_guesses = set(self.av.remaining_guesses)
-
 
         self.get_console_text()
         self.display_history += text_str + '\n'
@@ -314,7 +327,8 @@ class Wordle:
             name_str = f'The bot, {self.username},'
         else:
             name_str = f'{self.username}'
-        self.user_stats.add_game(solution_word=self.word, guesses=self.guessed_words,guess_results = self.guessed_results)
+        self.user_stats.add_game(solution_word=self.word, guesses=self.guessed_words,
+                                 guess_results=self.guessed_results)
         print(f'\n\n{name_str} solved the puzzle in {self.number_of_guesses} guesses{punctuation}\n')
         print(self.share_text)
 
@@ -322,12 +336,13 @@ class Wordle:
         return self.gh.__getattribute__(self.hint_type)()
 
 
-def play(console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None, bot_mode=False):
+def play(console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None, auto_play=False,
+         bot_mode=False):
     clear_console()
     if bot_mode and hint_type is None:
         hint_type = random.choice(GetHint.hint_types)
     with Wordle(console_type=console_type, first_word=first_word, hard_mode=hard_mode, allow_hint=allow_hint,
-                hint_type=hint_type, bot_mode=bot_mode) as w:
+                hint_type=hint_type, auto_play=auto_play, bot_mode=bot_mode) as w:
         play_again = True
         while play_again:
             w.play()
@@ -387,15 +402,13 @@ if __name__ == '__main__':
                         help="Turns off Wordle Hard-mode. Hard mode restricts the allowed guessed to solve the " +
                              "puzzle. This setting is the default in witch all allowed guesses can be used to narrow " +
                              "the field of remaining letters.")
-    parser.add_argument('--hint', dest='hint', action='store_true', default=True,
+    parser.add_argument('--hint', dest='hint', action='store_true',
                         help="Allows a hint to be available during game play. Type the word 'hint' instead of a five " +
                              "letter guess activate this feature, this lets the game choose a possible answer or " +
-                             "allowed guess for you. The game can play itself by repeating using 'hint'. Default " +
-                             "is that hints are allowed.")
-    parser.add_argument('--no-hint', dest='hint', action='store_false',
+                             "allowed guess as a suggestion. By default, no hints are allowed.")
+    parser.add_argument('--no-hint', dest='hint', action='store_false', default=False,
                         help="Disables a hint to be available during game play. Typing the word 'hint' has no effect " +
-                             "when the --no-hint augment is given. By default, hints are allowed." +
-                             "is that hints are allowed.")
+                             "when the --no-hint augment is given. By default, no hints are allowed.")
     parser.add_argument('--bot', dest='bot_mode', action='store_true',
                         help="Replace the human player with a bot that plays the game. The bot is " +
                              "selected at random or can be chosen with by specifying a 'Name' using the setting " +
@@ -404,6 +417,12 @@ if __name__ == '__main__':
     parser.add_argument('--no-bot', dest='bot_mode', action='store_false', default=False,
                         help="This is the default, a user enter guesses to solve the puzzle. The human play can " +
                              "can still receive hints from the bot if --hint is set.")
+    parser.add_argument('--auto-play', dest='auto_play', action='store_true',
+                        help="When using 'hint' during a game, auto-plays the suggestion from a bot. The default is " +
+                             "--no-autoplay. This is good for watching bot behavior.")
+    parser.add_argument('--no-auto-play', dest='bot_mode', action='store_false', default=False,
+                        help="This is the default, using the 'hint' during a game returns a suggestion from the bot " +
+                             "that is printed to the screen. This suggestions can be used or not.")
     parser.add_argument('--hint-type', dest='hint_type', metavar='Name', nargs=1, default=None, type=str,
                         help=f'Specify a Hint personally. {len(GetHint.hint_types)} hint types are available: ' +
                              f'{hint_types_str}.\n' +
@@ -432,4 +451,4 @@ if __name__ == '__main__':
         console_type = 'qwerty'
     # run the game script
     play(console_type=console_type, first_word=args.word, hard_mode=args.hard, allow_hint=args.hint,
-         hint_type=hint_name, bot_mode=args.bot_mode)
+         hint_type=hint_name, auto_play=args.auto_play, bot_mode=args.bot_mode)
