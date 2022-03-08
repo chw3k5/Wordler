@@ -1,5 +1,5 @@
 import random
-from calculate_best_words import calc_outcomes
+from calculate_best_words import calc_outcomes, print_results
 
 
 class GetHint:
@@ -83,12 +83,9 @@ class GetHint:
         previous_decision = self.check_decision_memory(guess_words, guess_results)
         if previous_decision is not None:
             print("Already decided")
-            return previous_decision
-
-        if start_word is not None:
-            if len(guess_words) < 1:
-                self.add_decision_memory(start_word, guess_words, guess_results)
-                return start_word
+            print_results(previous_decision[1],previous_decision[2],previous_decision[3],mode = mode,
+                      number_of_results_to_display = 10)
+            return previous_decision[0]
 
         if bros:  # combine caleb and jordan (who are brothers)
             top_words = []
@@ -124,26 +121,34 @@ class GetHint:
                               known_positions_initial=av.known_positions,
                               available_guesses_initial=av.all_guesses, mode=mode)
 
+        if start_word is not None:
+            if len(guess_words) < 1:
+                return start_word
     
         if sorted_words[0] in available_answers:
-            self.add_decision_memory(sorted_words[0], guess_words, guess_results)
+            self.add_decision_memory(sorted_words[0], guess_words, guess_results,
+                                         sorted_words, sorted_values, available_answers)
             return sorted_words[0]
         else:
             sorted_word, sorted_value = None, None
-            for sorted_word, sorted_value in zip(sorted_words, sorted_values):
+            for sorted_word, *sorted_value in zip(sorted_words, *sorted_values):
                 if sorted_word in available_answers:
                     break
-            if sorted_value < sorted_values[0] * pick_possible_factor and mode[0] != 'split':
-                self.add_decision_memory(sorted_word, guess_words, guess_results)
+            if sorted_value[0] < sorted_values[0][0] * pick_possible_factor and mode[0] != 'split':
+                self.add_decision_memory(sorted_word, guess_words, guess_results,
+                                             sorted_words, sorted_values, available_answers)
                 return sorted_word
-            elif sorted_value * pick_possible_factor < sorted_values[0] and mode[0] == 'split':
-                self.add_decision_memory(sorted_word, guess_words, guess_results)
+            elif sorted_value[0] * pick_possible_factor < sorted_values[0][0] and mode[0] == 'split':
+                self.add_decision_memory(sorted_word, guess_words, guess_results,
+                                             sorted_words, sorted_values, available_answers)
                 return sorted_word
             else:
-                self.add_decision_memory(sorted_words[0], guess_words, guess_results)
+                self.add_decision_memory(sorted_words[0], guess_words, guess_results,
+                                             sorted_words, sorted_values, available_answers)
                 return sorted_words[0]
 
-    def add_decision_memory(self, picked_word, guess_words, guess_results):
+    def add_decision_memory(self, picked_word, guess_words, guess_results,
+                                sorted_words, sorted_values, available_answers):
         # dictionary of past decision
         if len(guess_results) > 0:
             key_list = []
@@ -153,7 +158,8 @@ class GetHint:
             key_tuple = tuple(key_list)
 
             if not key_tuple in self.decision_memory.keys():
-                self.decision_memory[key_tuple] = picked_word
+                self.decision_memory[key_tuple] = [picked_word, sorted_words,
+                                                       sorted_values, available_answers]
 
     def check_decision_memory(self, guess_words, guess_results):
         if len(guess_results) > 0:

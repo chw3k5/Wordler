@@ -401,9 +401,15 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
         return available_answers_initial, [0], available_answers_initial #make return compatible
     else:
         if verbose:
-            #print("length of possible answers", len(available_answers_initial))
+            print("length of possible answers", len(available_answers_initial))
             if not (len(available_answers_initial) == len(all_answers)): #don't want to see it first time
-                print(available_answers_initial)
+                if len(available_answers_initial) < 25:
+                    for i in range(0,len(available_answers_initial)):
+                        print(available_answers_initial[i],end = ' ')
+                        if i % 5 == 4:
+                            print()
+                    print()
+
         if write_words:
             remaining_words_given_outcome_length = calculate_length_of_word_lists(remaining_words_given_outcome)
         else:
@@ -463,7 +469,7 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
             print_results(sorted_words,sorted_values,available_answers_initial,mode = mode,
                               number_of_results_to_display = number_of_results_to_display)
 
-        return sorted_words, sorted_values[0], available_answers_initial
+        return sorted_words, sorted_values, available_answers_initial
 
     
 def print_results(sorted_words,sorted_values,available_answers_initial,mode = 'ave',
