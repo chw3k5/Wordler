@@ -5,7 +5,7 @@ from calculate_best_words import calc_outcomes
 class GetHint:
     hint_types = ['caleb', 'natalie', 'jada', 'jordan']
 
-    def __init__(self, hint_type=None, hard_mode=False, bot_mode=False):
+    def __init__(self, hint_type=None, hard_mode=False, bot_mode=False,verbose = True):
         # settings
         self.hard_mode = hard_mode
         self.bot_mode = bot_mode
@@ -19,6 +19,7 @@ class GetHint:
         self.guess_words = None
         self.guess_results = None
         self.decision_memory = {}  # for jordan's bot to not have to recalculate
+        self.verbose = verbose
         # data that is initialized now
         self.reset()
 
@@ -99,7 +100,7 @@ class GetHint:
             check_guesses = top_words + av.remaining_words
 
             sorted_words, sorted_values, available_answers = \
-                calc_outcomes(rerun=False, verbose=True,
+                calc_outcomes(rerun=False, verbose=self.verbose,
                               number_of_results_to_display=10,
                               known_wrong_positions_initial=av.known_wrong_positions,
                               available_answers_initial=av.remaining_words,
@@ -108,7 +109,7 @@ class GetHint:
         else:
             if self.hard_mode:
                 sorted_words, sorted_values, available_answers = \
-                  calc_outcomes(rerun=False, verbose=True,
+                  calc_outcomes(rerun=False, verbose=self.verbose,
                               number_of_results_to_display=10,
                               known_wrong_positions_initial=av.known_wrong_positions,
                               available_answers_initial=av.remaining_words,
@@ -116,7 +117,7 @@ class GetHint:
                               available_guesses_initial=av.remaining_guesses, mode=mode)
             else:
                 sorted_words, sorted_values, available_answers = \
-                  calc_outcomes(rerun=False, verbose=True,
+                  calc_outcomes(rerun=False, verbose=self.verbose,
                               number_of_results_to_display=10,
                               known_wrong_positions_initial=av.known_wrong_positions,
                               available_answers_initial=av.remaining_words,

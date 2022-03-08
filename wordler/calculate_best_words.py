@@ -390,12 +390,14 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
                                                      available_guesses_initial = available_guesses_initial)
 
     if len(available_answers_initial) == 2:
-        print("Only two answers left pick one of:")
-        print(available_answers_initial[0],available_answers_initial[1])
+        if verbose:
+            print("Only two answers left pick one of:")
+            print(available_answers_initial[0],available_answers_initial[1])
         return available_answers_initial, [1,1], available_answers_initial #make return compatible
     elif len(available_answers_initial) == 1:
-        print("The only answer remaining is")
-        print(available_answers_initial[0])
+        if verbose:
+            print("The only answer remaining is")
+            print(available_answers_initial[0])
         return available_answers_initial, [0], available_answers_initial #make return compatible
     else:
         if verbose:

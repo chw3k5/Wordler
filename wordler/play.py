@@ -61,13 +61,14 @@ class Wordle:
     blank_display_line = ' ' * 15
 
     def __init__(self, console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None,
-                 auto_play=False, bot_mode=False, companions=None, verbose=True):
+                 auto_play=False, bot_mode=False, companions=None, verbose=True, bot_verbose = True):
         # settings
         self.console_type = console_type
         self.first_word = first_word
         self.hard_mode = hard_mode
         self.auto_play = auto_play
         self.verbose = verbose
+        self.bot_verbose = bot_verbose
         if self.auto_play:
             self.allow_hint = True
         else:
@@ -90,7 +91,7 @@ class Wordle:
             for companion_name in companions:
                 self.companions.append(Wordle(console_type=self.console_type, first_word=self.first_word,
                                               hard_mode=self.hard_mode, hint_type=companion_name, bot_mode=True,
-                                              verbose=False))
+                                              verbose=False,bot_verbose = False))
         # Data that is re-initialized between games
         self.remaining_guesses = None
         self.number_of_guesses = None
@@ -107,7 +108,7 @@ class Wordle:
         self.console_str = None
         self.av = None
         # stats data, initialized only once
-        self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=bot_mode)
+        self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=bot_mode, verbose = self.bot_verbose)
         self.user_stats = UserStats(username=self.username, hard_mode=self.hard_mode)
         self.prior_guesses = self.user_stats.get_prior_guesses()
         extra_space_num = 15 - len(self.username)
