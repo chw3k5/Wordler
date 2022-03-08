@@ -57,13 +57,17 @@ class Wordle:
                    ['k', 'l', 'm', 'n', 'p', 'q'],
                    ['r', 's', 't', 'v', 'w', 'x', 'z']]
 
+    companions_space = ' ' * 4
+    blank_display_line = ' ' * 15
+
     def __init__(self, console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None,
-                 auto_play=False, bot_mode=False, companions=None):
+                 auto_play=False, bot_mode=False, companions=None, verbose=True):
         # settings
         self.console_type = console_type
         self.first_word = first_word
         self.hard_mode = hard_mode
         self.auto_play = auto_play
+        self.verbose = verbose
         if self.auto_play:
             self.allow_hint = True
         else:
@@ -85,7 +89,8 @@ class Wordle:
             self.companions = []
             for companion_name in companions:
                 self.companions.append(Wordle(console_type=self.console_type, first_word=self.first_word,
-                                              hard_mode=self.hard_mode, hint_type=companion_name, bot_mode=True))
+                                              hard_mode=self.hard_mode, hint_type=companion_name, bot_mode=True,
+                                              verbose=False))
         # Data that is re-initialized between games
         self.remaining_guesses = None
         self.number_of_guesses = None
@@ -306,15 +311,31 @@ class Wordle:
         self.get_console_text()
         self.display_history.append(text_str)
         # the display statements
-        if not self.bot_mode:
+        if self.verbose:
             clear_console()
             print(self.console_str)
-            for display_line in self.display_history:
-                print(display_line)
+        if not self.bot_mode:
+            for line_index, display_line in list(enumerate(self.display_history)):
+                if self.companions is not None:
+                    for companion in self.companions:
+                        display_line += self.companions_space
+                        if line_index == 0:
+                            display_line +=  companion.display_history[0]
+                        else:
+                            share_text_index = line_index - 1
+                            if len(companion.share_text) > share_text_index:
+                                display_line += companion.share_text[share_text_index]
+                            else:
+                                display_line += ' ' * 15
+                if self.verbose:
+                    print(display_line)
 
     def play(self, word=None):
         self.reset()
         self.get_word(word=word)
+        if self.companions is not None:
+            for companion in self.companions:
+                companion.play(word=self.word)
         guess_word = None
         while guess_word != self.word:
             if self.bot_mode:
@@ -325,30 +346,55 @@ class Wordle:
 
         punctuation = get_punctuation(number_of_guesses=self.number_of_guesses)
         if self.bot_mode:
-            print(self.console_str)
-            for display_line in self.display_history:
-                print(display_line)
+            if self.verbose:
+                print(self.console_str)
+                for display_line in self.display_history:
+                    print(display_line)
             name_str = f'The bot, {self.username},'
         else:
             name_str = f'{self.username}'
         self.user_stats.add_game(solution_word=self.word, guesses=self.guessed_words,
                                  guess_results=self.guessed_results)
-        print(f'\n\n{name_str} solved the puzzle in {self.number_of_guesses} guesses{punctuation}\n')
-        for text_line in self.share_text:
-            print(text_line)
+        if self.verbose:
+            if self.companions is not None:
+                clear_console()
+                print(self.console_str)
+                display_index_max = len(self.display_history)
+                for companion in self.companions:
+                    index_max_this_bot = len(companion.display_history)
+                    if display_index_max < index_max_this_bot:
+                        display_index_max = index_max_this_bot
+                for display_index in range(display_index_max):
+                    if display_index < len(self.display_history):
+                        display_line = self.display_history[display_index]
+                    else:
+                        display_line = self.blank_display_line
+                    if self.companions is not None:
+                        for companion in self.companions:
+                            display_line += self.companions_space
+                            if len(companion.display_history) > display_index:
+                                display_line += companion.display_history[display_index]
+                            else:
+                                display_line += self.blank_display_line
+                    if self.verbose:
+                        print(display_line)
+
+            print(f'\n\n{name_str} solved the puzzle in {self.number_of_guesses} guesses{punctuation}\n')
+            for text_line in self.share_text:
+                print(text_line)
 
     def bot_turn(self):
-        return self.gh.__getattribute__(self.hint_type)(av=self.av, guess_words=self.guessed_words,
-                                             guess_results=self.guessed_results)
+        return self.gh.get_hint(av=self.av, guess_words=self.guessed_words, guess_results=self.guessed_results,
+                                hint_type=self.hint_type)
 
 
 def play(console_type='qwerty', first_word=None, hard_mode=False, allow_hint=True, hint_type=None, auto_play=False,
-         bot_mode=False):
+         bot_mode=False, companions=None):
     clear_console()
     if bot_mode and hint_type is None:
         hint_type = random.choice(GetHint.hint_types)
     with Wordle(console_type=console_type, first_word=first_word, hard_mode=hard_mode, allow_hint=allow_hint,
-                hint_type=hint_type, auto_play=auto_play, bot_mode=bot_mode) as w:
+                hint_type=hint_type, auto_play=auto_play, bot_mode=bot_mode, companions=companions) as w:
         play_again = True
         while play_again:
             w.play()
@@ -415,12 +461,12 @@ if __name__ == '__main__':
     parser.add_argument('--no-hint', dest='hint', action='store_false', default=False,
                         help="Disables a hint to be available during game play. Typing the word 'hint' has no effect " +
                              "when the --no-hint augment is given. By default, no hints are allowed.")
-    parser.add_argument('--bot', dest='bot_mode', action='store_true',
+    parser.add_argument('--bot-mode', dest='bot_mode', action='store_true',
                         help="Replace the human player with a bot that plays the game. The bot is " +
                              "selected at random or can be chosen with by specifying a 'Name' using the setting " +
                              "--hint-type Name argument. The default is --no-bot were a humand player enter guesses " +
                              "and solves the puzzle.")
-    parser.add_argument('--no-bot', dest='bot_mode', action='store_false', default=False,
+    parser.add_argument('--no-bot-mode', dest='bot_mode', action='store_false', default=False,
                         help="This is the default, a user enter guesses to solve the puzzle. The human play can " +
                              "can still receive hints from the bot if --hint is set.")
     parser.add_argument('--auto-play', dest='auto_play', action='store_true',
@@ -444,6 +490,8 @@ if __name__ == '__main__':
                              f'quickly as possible, until only one or two possible solutions remain and then those ' +
                              f'are the hints returned. Jada and Natalie both know how ' +
                              f'to follow the rules in the more restrictive hard mode.')
+    parser.add_argument('--bots', dest='bots', metavar='Names', nargs='+', default=None, type=str,
+                        help=f'Name one or more bots to play against. Available bot names: {hint_types_str}.\n')
     args = parser.parse_args()
     if args.hint_type is None:
         hint_name = None
@@ -457,4 +505,4 @@ if __name__ == '__main__':
         console_type = 'qwerty'
     # run the game script
     play(console_type=console_type, first_word=args.word, hard_mode=args.hard, allow_hint=args.hint,
-         hint_type=hint_name, auto_play=args.auto_play, bot_mode=args.bot_mode)
+         hint_type=hint_name, auto_play=args.auto_play, bot_mode=args.bot_mode, companions=args.bots)
