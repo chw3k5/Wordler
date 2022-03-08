@@ -83,7 +83,8 @@ class GetHint:
         previous_decision = self.check_decision_memory(guess_words, guess_results)
         if previous_decision is not None:
             print("Already decided")
-            print_results(previous_decision[1],previous_decision[2],previous_decision[3],mode = mode,
+            if self.verbose:
+                print_results(previous_decision[1],previous_decision[2],previous_decision[3],mode = mode,
                       number_of_results_to_display = 10)
             return previous_decision[0]
 
