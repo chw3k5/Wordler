@@ -101,10 +101,16 @@ class Wordle:
         self.word = None
         self.console_str = None
         self.av = None
-        self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=bot_mode)
         # stats data, initialized only once
+        self.gh = GetHint(hint_type=self.hint_type, hard_mode=self.hard_mode, bot_mode=bot_mode)
         self.user_stats = UserStats(username=self.username, hard_mode=self.hard_mode)
         self.prior_guesses = self.user_stats.get_prior_guesses()
+        extra_space_num = 15 - len(self.username)
+        if extra_space_num < 1:
+            self.username_str = self.username[:15]
+        else:
+            extra_space_str = " " * extra_space_num
+            self.username_str = f'{self.username}{extra_space_str}'
         # data initialization
         self.games_number = 0
         allowed_words_not_played = self.allowed_words - self.prior_guesses
@@ -124,8 +130,8 @@ class Wordle:
         self.number_of_guesses = 0
         self.guessed_words = []
         self.guessed_results = []
-        self.share_text = ''
-        self.display_history = ''
+        self.share_text = []
+        self.display_history = [f'{self.username_str}']
 
         self.av = AvailableWords(verbose=False)
         self.gh.reset()
@@ -208,15 +214,15 @@ class Wordle:
             self.unknown.remove(letter)
 
     def is_correct_place_letter(self, letter):
-        self.share_text += is_correct_place_letter_text(letter=' ')
+        self.share_text[-1] += is_correct_place_letter_text(letter=' ')
         return is_correct_place_letter_text(letter=letter)
 
     def is_used_but_place_is_wrong(self, letter):
-        self.share_text += is_used_but_place_is_wrong_text(letter=' ')
+        self.share_text[-1] += is_used_but_place_is_wrong_text(letter=' ')
         return is_used_but_place_is_wrong_text(letter=letter)
 
     def is_not_used_letter(self, letter):
-        self.share_text += is_not_used_letter_text(letter=' ')
+        self.share_text[-1] += is_not_used_letter_text(letter=' ')
         return is_not_used_letter_text(letter=letter)
 
     def make_letter_text(self, guess_letter, display_type):
@@ -280,6 +286,7 @@ class Wordle:
         return index_to_guess_letter_and_display_type
 
     def print_display(self, guess_word):
+        self.share_text.append('')
         text_str = ''
         index_to_guess_letter_and_display_type = self.determine_test_types(guess_word)
         guess_results = ''
@@ -296,15 +303,14 @@ class Wordle:
             self.remaining_guesses.remove(guess_word)
         else:
             self.remaining_guesses = set(self.av.remaining_guesses)
-
         self.get_console_text()
-        self.display_history += text_str + '\n'
-        self.share_text += '\n'
+        self.display_history.append(text_str)
         # the display statements
         if not self.bot_mode:
             clear_console()
             print(self.console_str)
-            print(self.display_history)
+            for display_line in self.display_history:
+                print(display_line)
 
     def play(self, word=None):
         self.reset()
@@ -320,14 +326,16 @@ class Wordle:
         punctuation = get_punctuation(number_of_guesses=self.number_of_guesses)
         if self.bot_mode:
             print(self.console_str)
-            print(self.display_history)
+            for display_line in self.display_history:
+                print(display_line)
             name_str = f'The bot, {self.username},'
         else:
             name_str = f'{self.username}'
         self.user_stats.add_game(solution_word=self.word, guesses=self.guessed_words,
                                  guess_results=self.guessed_results)
         print(f'\n\n{name_str} solved the puzzle in {self.number_of_guesses} guesses{punctuation}\n')
-        print(self.share_text)
+        for text_line in self.share_text:
+            print(text_line)
 
     def bot_turn(self):
         return self.gh.__getattribute__(self.hint_type)(av=self.av, guess_words=self.guessed_words,
