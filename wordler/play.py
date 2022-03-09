@@ -195,14 +195,14 @@ class Wordle:
         else:
             mode_str = '\n\n'
         while guess_word is None:
-            hint_str = f' type "quit" to quit this game\n'
+            hint_str = f' type "quit" to quit this game'
             if hints_allowed:
                 if self.hint_type is None:
                     hint_type = random.choice(GetHint.hint_types)
                 else:
                     hint_type = self.hint_type
                 bot_name = hint_type[0].upper() + hint_type[1:]
-                hint_str += f' type "hint" to get a hint word from {bot_name}'
+                hint_str += f'\n type "hint" to get a hint word from {bot_name}'
             else:
                 bot_name = 'NoName'
                 hint_str += ''
