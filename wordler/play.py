@@ -42,6 +42,11 @@ def is_unknown_test(letter):
     return f'\033[1;30;47m {letter.upper()} \033[0;0m'
 
 
+class UserQuit(Exception):
+    """An Exception to tell us that the user selected to quit the game."""
+    pass
+
+
 class Wordle:
     allowed_letters = set(ascii_lowercase)
     allowed_words = deepcopy(all_answers)
@@ -183,26 +188,30 @@ class Wordle:
 
     def ask_for_word(self):
         self.number_of_guesses += 1
+        hints_allowed = self.number_of_guesses > 6 or self.allow_hint
         guess_word = None
         if self.hard_mode:
-            mode_str = '\n(Hard-mode, guess must be possible answer)'
+            mode_str = '\n\n Hard-mode, guess must be possible answer'
         else:
-            mode_str = ''
+            mode_str = '\n\n'
         while guess_word is None:
-            if self.allow_hint:
+            hint_str = f' type "quit" to quit this game\n'
+            if hints_allowed:
                 if self.hint_type is None:
                     hint_type = random.choice(GetHint.hint_types)
                 else:
                     hint_type = self.hint_type
                 bot_name = hint_type[0].upper() + hint_type[1:]
-                hint_str = f' (type "hint" to get a hint word from {bot_name})'
+                hint_str += f' type "hint" to get a hint word from {bot_name}'
             else:
                 bot_name = 'NoName'
-                hint_str = ''
+                hint_str += ''
                 hint_type = None
-            raw_word = input(f"{mode_str}\nEnter guess number: {self.number_of_guesses}{hint_str}\n ")
+            raw_word = input(f"{mode_str}\n{hint_str}\nEnter guess number: {self.number_of_guesses}\n ")
             test_word = raw_word.strip().lower()
-            if self.allow_hint and test_word == 'hint':
+            if test_word == 'quit':
+                raise UserQuit
+            elif hints_allowed and test_word == 'hint':
                 test_word = self.gh.get_hint(av=self.av, guess_words=self.guessed_words,
                                              guess_results=self.guessed_results, hint_type=hint_type)
                 if self.auto_play and len(test_word) == 5 and test_word in self.remaining_guesses:
@@ -338,24 +347,18 @@ class Wordle:
             for companion in self.companions:
                 companion.play(word=self.word)
         guess_word = None
+        exit_by_quit = False
         while guess_word != self.word:
             if self.bot_mode:
                 guess_word = self.bot_turn()
-            else:
-                guess_word = self.ask_for_word()
-            self.print_display(guess_word=guess_word)
 
-        punctuation = get_punctuation(number_of_guesses=self.number_of_guesses)
-        if self.bot_mode:
-            if self.verbose:
-                print(self.console_str)
-                for display_line in self.display_history:
-                    print(display_line)
-            name_str = f'The bot, {self.username},'
-        else:
-            name_str = f'{self.username}'
-        self.user_stats.add_game(solution_word=self.word, guesses=self.guessed_words,
-                                 guess_results=self.guessed_results)
+            else:
+                try:
+                    guess_word = self.ask_for_word()
+                except UserQuit:
+                    guess_word = self.word
+                    exit_by_quit = True
+            self.print_display(guess_word=guess_word)
         if self.verbose:
             if self.companions is not None:
                 clear_console()
@@ -379,10 +382,21 @@ class Wordle:
                                 display_line += self.blank_display_line
                     if self.verbose:
                         print(display_line)
-
-            print(f'\n\n{name_str} solved the puzzle in {self.number_of_guesses} guesses{punctuation}\n')
-            for text_line in self.share_text:
-                print(text_line)
+            if not exit_by_quit:
+                punctuation = get_punctuation(number_of_guesses=self.number_of_guesses)
+                if self.bot_mode:
+                    if self.verbose:
+                        print(self.console_str)
+                        for display_line in self.display_history:
+                            print(display_line)
+                    name_str = f'The bot, {self.username},'
+                else:
+                    name_str = f'{self.username}'
+                self.user_stats.add_game(solution_word=self.word, guesses=self.guessed_words,
+                                         guess_results=self.guessed_results)
+                print(f'\n\n{name_str} solved the puzzle in {self.number_of_guesses} guesses{punctuation}\n')
+                for text_line in self.share_text:
+                    print(text_line)
 
     def bot_turn(self):
         return self.gh.get_hint(av=self.av, guess_words=self.guessed_words, guess_results=self.guessed_results,
