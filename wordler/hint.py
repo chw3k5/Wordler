@@ -123,8 +123,8 @@ class GetHint:
         if start_word is not None:
             if len(guess_words) < 1:
                 return start_word
-        else:
-            return(random.choice(sorted_words[0:10]))
+            else:
+                return(random.choice(sorted_words[0:10]))
     
         if sorted_words[0] in available_answers:
             self.add_decision_memory(sorted_words[0], guess_words, guess_results,
