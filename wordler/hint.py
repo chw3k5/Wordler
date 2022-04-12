@@ -77,8 +77,6 @@ class GetHint:
                pick_possible_factor=1.0001, start_word=None, bros=False, bros_number=100):
         if mode is None:
             mode = ['split', 'variance']
-        if start_word is None:
-            start_word = 'salet'
 
         previous_decision = self.check_decision_memory(guess_words, guess_results)
         if previous_decision is not None:
@@ -125,6 +123,8 @@ class GetHint:
         if start_word is not None:
             if len(guess_words) < 1:
                 return start_word
+        else:
+            return(random.choice(sorted_words[0:10]))
     
         if sorted_words[0] in available_answers:
             self.add_decision_memory(sorted_words[0], guess_words, guess_results,
