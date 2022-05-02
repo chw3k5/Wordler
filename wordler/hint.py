@@ -82,7 +82,8 @@ class GetHint:
         if previous_decision is not None:
             print("Already decided")
             if self.verbose:
-                print_results(previous_decision[1],previous_decision[2],previous_decision[3],mode = mode,
+                if len(previous_decision[1])>2:
+                    print_results(previous_decision[1],previous_decision[2],previous_decision[3],mode = mode,
                       number_of_results_to_display = 10)
             return previous_decision[0]
 
@@ -119,9 +120,9 @@ class GetHint:
                               available_answers_initial=av.remaining_words,
                               known_positions_initial=av.known_positions,
                               available_guesses_initial=av.all_guesses, mode=mode)
-
-        if start_word is not None:
-            if len(guess_words) < 1:
+                
+        if len(guess_words) < 1:
+            if start_word is not None:
                 return start_word
             else:
                 return(random.choice(sorted_words[0:10]))
