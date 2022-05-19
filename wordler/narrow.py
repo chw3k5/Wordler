@@ -128,11 +128,13 @@ def narrow_by_usage(available_answers, known_wrong_positions, letter, min_letter
                 yield test_word
 
 
-def narrow_by_usage_wrapper(available_answers, known_wrong_positions, letter, letter_index, min_letter_occurrences):
+def narrow_by_usage_wrapper(available_answers, known_wrong_positions, letter, letter_index, min_letter_occurrences,
+                                narrow_guesses = False):
     # track the data about this letter's usage
-    if letter not in known_wrong_positions.keys():
-        known_wrong_positions[letter] = set()
-    known_wrong_positions[letter].add(letter_index)
+    if not narrow_guesses: #hard mode allows you to repeat yellow letters in same place (why I don't know)
+        if letter not in known_wrong_positions.keys():
+            known_wrong_positions[letter] = set()
+        known_wrong_positions[letter].add(letter_index)
     remaining = list(narrow_by_usage(available_answers=available_answers, known_wrong_positions=known_wrong_positions,
                                      letter=letter, min_letter_occurrences=min_letter_occurrences))
     return known_wrong_positions, remaining
@@ -157,7 +159,8 @@ def narrow_by_wrong_place_jordan(known_wrong_positions, guess_word, guess_result
     return known_wrong_positions
 
 
-def calc_remaining_words(known_wrong_positions, known_positions, available_answers, guess_word, guess_results):
+def calc_remaining_words(known_wrong_positions, known_positions, available_answers, guess_word, guess_results,
+                             narrow_guesses = False):
     unassigned_indexes = list(range(len(guess_word)))
     required_letter_count_this_guess = {}
     known_positions_this_guess = {}
@@ -193,7 +196,8 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
                 narrow_by_usage_wrapper(available_answers=available_answers,
                                         known_wrong_positions=known_wrong_positions,
                                         letter=is_used_guess_letter, letter_index=unassigned_index,
-                                        min_letter_occurrences=required_letter_count_this_guess[is_used_guess_letter])
+                                        min_letter_occurrences=required_letter_count_this_guess[is_used_guess_letter],
+                                        narrow_guesses = narrow_guesses)
             unassigned_indexes.remove(unassigned_index)
 
     # letters that are not used or are not used in this number and not used at a given index in the solution word
@@ -201,19 +205,21 @@ def calc_remaining_words(known_wrong_positions, known_positions, available_answe
         if guess_results[unassigned_index] == '0':
             not_needed_guess_letter = guess_word[unassigned_index]
             if not_needed_guess_letter in required_letter_count_this_guess.keys():
-                # this letter is used, but not the number of times it occurs in the guess word
-                max_letter_occurrences = required_letter_count_this_guess[not_needed_guess_letter]
-                available_answers = \
-                    narrow_by_max_usage(available_answers=available_answers, letter=not_needed_guess_letter,
+                if not narrow_guesses:
+                    # not narrow_guesses is becuase hard mode allows repeated letters even if thy have been ruled out
+                    # this letter is used, but not the number of times it occurs in the guess word
+                    max_letter_occurrences = required_letter_count_this_guess[not_needed_guess_letter]
+                    available_answers = \
+                      narrow_by_max_usage(available_answers=available_answers, letter=not_needed_guess_letter,
                                         max_letter_occurrences=max_letter_occurrences)
-                # we also need to eliminate the usage of this particular letter in this position
-                # example case: 'aahed' with a result of 10100 (answer is 'coach'), the word 'macho' should be removed
-                available_answers = narrow_by_wrong_place(available_answers=available_answers,
+                    # we also need to eliminate the usage of this particular letter in this position
+                    # example case: 'aahed' with a result of 10100 (answer is 'coach'), the word 'macho' should be removed
+                    available_answers = narrow_by_wrong_place(available_answers=available_answers,
                                                           letter=not_needed_guess_letter, letter_index=unassigned_index)
-                # record know wrong positions
-                if not_needed_guess_letter not in known_wrong_positions.keys():
-                    known_wrong_positions[not_needed_guess_letter] = set()
-                known_wrong_positions[not_needed_guess_letter].add(unassigned_index)
+                    # record know wrong positions
+                    if not_needed_guess_letter not in known_wrong_positions.keys():
+                        known_wrong_positions[not_needed_guess_letter] = set()
+                    known_wrong_positions[not_needed_guess_letter].add(unassigned_index)
 
             else:
                 # this letter is not in the word at all
@@ -256,6 +262,7 @@ class AvailableWords:
         self.all_guesses_by_rank = None
         self.ranked_vowel_words_by_rank = None
         self.ranked_vowel_guesses_by_rank = None
+        self.narrow_guesses = True # want to be able to turn off for hard mode in antiwordle
         # the method the set/restores the initial state
         self.reset()
 
@@ -402,9 +409,11 @@ class AvailableWords:
 
         _known_wrong_positions, _known_positions_this_guess, _required_letter_count_this_guess, available_guesses,\
             _known_not_used = \
-            calc_remaining_words(known_wrong_positions=known_wrong_positions_init,
+            calc_remaining_words(known_wrong_positions={}, #hard mode does not elimate gueses based on known wrong positions
                                  available_answers=self.remaining_guesses, guess_word=guess_word,
-                                 guess_results=guess_results, known_positions=know_positions_init)
+                                 guess_results=guess_results, known_positions=know_positions_init,
+                                 narrow_guesses = self.narrow_guesses)
+
         self.set_data(word_list=available_answers, guesses=available_guesses)
         # display the results
         if self.verbose:
