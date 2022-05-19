@@ -288,7 +288,7 @@ def per_word_outcomes_wrapper(args):
                              known_positions_initial=known_positions_initial))
     print(f'{" %3d" % (100*guess_index/len_available_guesses_initial)}% complete'+\
               f'{" (%5d" % (guess_index)}/{"%5d" % (len_available_guesses_initial)})', end='\r')
-    return this_word_outcomes
+    return this_word_outcomes #list of all possible remaining answers
 
 def generate_all_words_outcomes(known_wrong_positions_initial=None, available_answers_initial=None,
                                 known_positions_initial=None,available_guesses_initial = None):
@@ -333,7 +333,7 @@ def calc(known_wrong_positions_initial=None, available_answers_initial=None,
 def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_results_to_display=25,
                   known_wrong_positions_initial=None, available_answers_initial=None,
                   known_positions_initial=None,available_guesses_initial = None,
-                  verbose = True,mode = ['split','variance']):
+                  verbose = True,mode = ['split','variance'],anti = False):
 
     if not isinstance(mode, list):
         mode = [mode]
@@ -348,7 +348,7 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
     """
     if guess_words == None: # not supplyin past guesses and results
         if len(available_answers_initial) != len(all_answers): # detect if supplying rules instead of guesses and results
-            if len(available_answers_initial) > 2:
+            if len(available_answers_initial) > 2 or anti:
                 remaining_words_given_outcome = calc(known_wrong_positions_initial=known_wrong_positions_initial,
                                                      available_answers_initial=available_answers_initial,
                                                      known_positions_initial=known_positions_initial,
@@ -383,18 +383,18 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
 
             known_positions_initial.update(known_positions_this_guess)
 
-        if len(available_answers_initial) > 2:
+        if len(available_answers_initial) > 2 or anti:
             remaining_words_given_outcome = calc(known_wrong_positions_initial=known_wrong_positions_initial,
                                                      available_answers_initial=available_answers_initial,
                                                      known_positions_initial=known_positions_initial,
                                                      available_guesses_initial = available_guesses_initial)
 
-    if len(available_answers_initial) == 2:
+    if len(available_answers_initial) == 2 and not anti:
         if verbose:
             print("Only two answers left pick one of:")
-            print(available_answers_initial[0],available_answers_initial[1])
+            print(available_answers_initial[0],available_answers_initial[1])       
         return available_answers_initial, [1,1], available_answers_initial #make return compatible
-    elif len(available_answers_initial) == 1:
+    elif len(available_answers_initial) == 1 and not anti:
         if verbose:
             print("The only answer remaining is")
             print(available_answers_initial[0])
@@ -448,7 +448,6 @@ def calc_outcomes(guess_words=None, guess_results=None, rerun=False, number_of_r
                 raise KeyError(f'mode: {mode}, not available.')
 
         if len(mode) == 1:
-            print("true")
             if debug_mode:
                 sorted_lists = sorted(zip(metrics[0], available_guesses_initial[0:100]),reverse = reversed)
             else:
@@ -519,7 +518,6 @@ def print_results(sorted_words,sorted_values,available_answers_initial,mode = 'a
                 answer_available = True
             
 def print_line(sorted_word,sorted_value,mode = 'ave',in_answers = False):
-    #print(sorted_value)
     if in_answers:
         line = f'\033[1;30;42m{sorted_word} '
     else:
@@ -541,9 +539,16 @@ def print_line(sorted_word,sorted_value,mode = 'ave',in_answers = False):
         line += '\033[0;0m'
     print(line)
     
-def helper(mode = 'ave',number_of_results_to_display = 20,hard_mode = False):
+def helper(mode = 'ave',number_of_results_to_display = 40,hard_mode = False,anti = False,anti_hard = False):
     av = AvailableWords()
-    while len(av) > 1:
+    av.verbose = False
+    if anti:
+        finished = len(av.remaining_guesses)
+        if anti_hard:
+            av.narrow_guesses = False 
+    else:
+        finished = len(av)
+    while finished > 1:
         if hard_mode and av.guess_number != 0: # hard and not first
             print("hard_mode")
             calc_outcomes(rerun=do_calculated_first_guesses_rerun,
@@ -552,7 +557,7 @@ def helper(mode = 'ave',number_of_results_to_display = 20,hard_mode = False):
                       available_answers_initial=av.remaining_words,
                       known_positions_initial=av.known_positions,
                       available_guesses_initial=av.remaining_guesses,
-                      mode = mode)
+                      mode = mode,anti = anti)
         else:
             calc_outcomes(rerun=do_calculated_first_guesses_rerun,
                       number_of_results_to_display=number_of_results_to_display,
@@ -561,11 +566,19 @@ def helper(mode = 'ave',number_of_results_to_display = 20,hard_mode = False):
                       known_positions_initial=av.known_positions,
                       available_guesses_initial=av.all_guesses,
                       mode = mode)
+        if anti:
+            finished = len(av.remaining_guesses)
+        else:
+            finished = len(av)
+        if finished == 1: # only one choice remains
+            break
         av.ask_guess()
+        if len(av.known_positions) == 5: #all greens
+            break
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description='Parser for play.py, a Wordle Emulator.')
+    parser = argparse.ArgumentParser(description='Parser for calculate_best_words.py, a Wordle bot.')
     parser.add_argument('--hard', dest='hard', action='store_true',
                         help="Turns on Wordle Hard-mode. Hard mode restricts the allowed guessed to solve the puzzle." +
                              "Guesses in Hard mode must be possible solutions to the puzzle. The default is " +
@@ -574,6 +587,29 @@ if __name__ == '__main__':
                         help="Turns off Wordle Hard-mode. Hard mode restricts the allowed guessed to solve the " +
                              "puzzle. This setting is the default in witch all allowed guesses can be used to narrow " +
                              "the field of remaining letters.")
+    parser.add_argument('--anti', dest='anti', action='store_true',
+                        help="Allow you to keep rank guesses even when there are only a few possible answers left" +
+                             "Still in beta what we really want is to maximize the remaining number of guesses rather"+
+                            " but works okay since split mode only depends on maximimizing different number of outcomes"+
+                            " and that is only dependent on possible answers and the lenght of lists don't matter")
+    parser.add_argument('--n', dest='number_of_results_to_display', metavar='n', nargs=1, default=None, type=int,
+                        help=f'Specify a number of results to display: ')
     args = parser.parse_args()
-    helper(mode = ['split','variance','minimax','ave','cost'],hard_mode=args.hard,number_of_results_to_display=25 )
+    if args.anti:
+        number_of_results_to_display = 15000 # want to see the end of the list
+        if args.hard:
+            anti_hard = True
+        else:
+            anti_hard = False
+        args.hard = True
+        mode = ['split','variance','minimax','ave'] #cost not calculated for antiwordle
+    else:
+        number_of_results_to_display = 40
+        anti_hard = False
+        mode = ['split','variance','minimax','ave','cost']
+    if args.number_of_results_to_display != None:
+        if not args.anti:
+            number_of_results_to_display = args.number_of_results_to_display[0]
+    helper(mode = mode,hard_mode=args.hard,anti=args.anti,number_of_results_to_display=number_of_results_to_display,
+               anti_hard=anti_hard )
 
